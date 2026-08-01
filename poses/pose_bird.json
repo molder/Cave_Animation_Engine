@@ -1,0 +1,61 @@
+{
+  "version": "V12",
+  "joints": {
+    "nose": {
+      "x": 300,
+      "y": 130
+    },
+    "neck": {
+      "x": 303,
+      "y": 224
+    },
+    "left_shoulder": {
+      "x": 256,
+      "y": 232
+    },
+    "right_shoulder": {
+      "x": 334,
+      "y": 219
+    },
+    "left_elbow": {
+      "x": 154,
+      "y": 159
+    },
+    "right_elbow": {
+      "x": 460,
+      "y": 167
+    },
+    "left_wrist": {
+      "x": 58,
+      "y": 204
+    },
+    "right_wrist": {
+      "x": 534,
+      "y": 221
+    },
+    "left_hip": {
+      "x": 226,
+      "y": 334
+    },
+    "right_hip": {
+      "x": 349,
+      "y": 320
+    },
+    "left_knee": {
+      "x": 205,
+      "y": 408
+    },
+    "right_knee": {
+      "x": 415,
+      "y": 419
+    },
+    "left_ankle": {
+      "x": 160,
+      "y": 493
+    },
+    "right_ankle": {
+      "x": 402,
+      "y": 512
+    }
+  }
+}
