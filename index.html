@@ -7,39 +7,12 @@
 
 <title>Cave Animation Engine V11</title>
 
-<style>
-
-body{
-    margin:0;
-    background:#111;
-    color:white;
-    font-family:Arial;
-}
-
-#toolbar{
-    background:#222;
-    padding:10px;
-}
-
-button,input,select{
-    margin:4px;
-    padding:6px;
-}
 
 
-canvas{
-    display:block;
-    margin:auto;
-    background:#333;
-}
+<meta charset="UTF-8">
 
-
-.slider{
-    width:200px;
-}
-
-
-</style>
+<title>Cave Animation Engine V11</title>
+<link rel="stylesheet" href="style.css">
 
 </head>
 
@@ -47,7 +20,7 @@ canvas{
 <body>
 
 
-<div id="toolbar">
+<div id="menu">
 
 
 <h3>
@@ -163,7 +136,7 @@ value="100">
 
 </div>
 
-
+<div id="spaceship"></div>
 
 <canvas 
 id="canvas"
@@ -172,7 +145,8 @@ height="600">
 </canvas>
 
 
-
+<script src="menu_fx.js"></script>
+<script src="animation.js"></script>
 <script src="engine.js"></script>
 
 
