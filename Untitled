@@ -1,137 +1,229 @@
-// ==================================================
-// Cave Animation Engine
-// animation.js
-// ==================================================
+# Cave Animation Engine
 
+## Version
+Current development version: V11
 
-let animationSystem = {
+A browser-based 2D character deformation and animation system developed for audiovisual and artistic applications.
 
+The engine combines:
 
-    current:null,
+- image-based characters
+- editable skeleton poses
+- mesh deformation
+- procedural animation
+- sci-fi inspired interface design
 
-    playing:false,
+---
 
-    time:0,
+# Core Features
 
-    speed:1,
+## Image System
 
+- Load external PNG/JPG images
+- Display images on canvas
+- Prepare images for deformation
 
-    animations:{}
+## Pose System
 
+- Load skeleton pose JSON files
+- Create default poses
+- Drag and edit joints
+- Save custom poses
 
+Supported joints:
 
-};
+- nose
+- neck
+- shoulders
+- elbows
+- wrists
+- hips
+- knees
+- ankles
 
+---
 
+# Mesh Deformation
 
+The engine creates a triangle-based deformation mesh.
 
-// ==================================================
-// REGISTER ANIMATION
-// ==================================================
+Workflow:
 
-function registerAnimation(name,callback){
+1. Load image
+2. Load or create pose
+3. Create mesh
+4. Move skeleton joints
+5. Mesh follows the skeleton
 
+The deformation system uses:
 
-animationSystem.animations[name]=callback;
+- mesh points
+- bone binding
+- triangle texture mapping
 
+The skeleton controls the image without destroying the original texture.
 
-console.log(
-"Animation registered:",
-name
-);
+---
 
+# Animation System
 
-}
+Animations are separated into:
+animation.js
 
 
+The engine supports external animation modules.
 
+Current animations:
 
-// ==================================================
-// PLAY
-// ==================================================
+## Breathing
 
-function playAnimation(name){
+Subtle body expansion.
 
+## Walking
 
-if(!animationSystem.animations[name]){
+Leg movement with connected mesh deformation.
 
+## Hip Hop
 
-console.warn(
-"Animation not found:",
-name
-);
+Rhythmic body movement:
 
+- shoulders
+- arms
+- bounce
 
-return;
+## Techno
 
-}
+Pulse based movement:
 
+- hands
+- body rhythm
 
+## Ceremony
 
-animationSystem.current=name;
+Slow gesture movement inspired by performance and calligraphy.
 
-animationSystem.playing=true;
+---
 
+# Project Structure
 
-animationSystem.time=0;
 
+Cave_Animation_Engine
 
-}
+│
+├── index.html
+│
+├── engine.js
+│
+├── animation.js
+│
+├── style.css
+│
+├── menu_fx.js
+│
+├── poses
+│ └── pose.json
+│
+└── animations
+├── breathing.json
+├── walking.json
+├── hiphop.json
+├── techno.json
+└── ceremony.json
 
 
+---
 
+# Interface Design
 
+The UI follows a silent sci-fi philosophy:
 
+- minimal controls
+- transparent holographic panel
+- subtle green illumination
+- low visual distraction
 
-// ==================================================
-// STOP
-// ==================================================
+The artwork remains the main focus.
 
-function stopAnimation(){
+---
 
+# Development Roadmap
 
-animationSystem.playing=false;
+## V12
 
+Animation improvements:
 
-}
+- smoother interpolation
+- keyframe animation
+- animation recording
+- external animation presets
 
 
+## V13
 
+Advanced deformation:
 
+- weighted bones
+- multiple influence zones
+- smoother body bending
 
-// ==================================================
-// UPDATE
-// ==================================================
 
-function updateAnimations(){
+## V14
 
+Performance integration:
 
+- OSC control
+- TouchDesigner communication
+- live tracking input
 
-if(!animationSystem.playing)
-return;
 
+---
 
+# Development Notes
 
-animationSystem.time +=
-0.03 *
-animationSystem.speed;
+Important rule:
 
+`engine.js`
 
+handles:
 
-let fn =
-animationSystem.animations[
-animationSystem.current
-];
+- image
+- pose
+- mesh
+- rendering
 
 
+`animation.js`
 
-if(fn){
+handles:
 
-fn(
-animationSystem.time
-);
+- movement
+- choreography
+- procedural behaviour
 
-}
 
+Keep animation separated from the rendering engine.
 
-}
+---
+
+# Git Checkpoint
+
+Current stable milestone:
+
+
+Clean UI
+Working image loading
+Working pose loading
+Working mesh creation
+Working skeleton editing
+Connected animation system
+
+
+---
+
+Developed for experimental animation and audiovisual performance workflows.
+
+Then commit it:
+
+git add README.md
+git commit -m "Add project documentation and development roadmap"
+git push origin main
