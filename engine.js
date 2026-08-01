@@ -1,24 +1,23 @@
 // ==================================================
-// Cave Animation Engine V11
+// Cave Animation Engine V12
 // engine.js
-// Part 1/4
+// PART 1/4
+// Stable reconstruction from V11
 // ==================================================
 
 
-// ----------------------------
+// ==================================================
 // CANVAS
-// ----------------------------
+// ==================================================
 
-const canvas =
-document.getElementById("canvas");
+const canvas = document.getElementById("canvas");
 
-const ctx =
-canvas.getContext("2d");
+const ctx = canvas.getContext("2d");
 
 
-// ----------------------------
+// ==================================================
 // UI REFERENCES
-// ----------------------------
+// ==================================================
 
 const imageLoader =
 document.getElementById("imageLoader");
@@ -41,78 +40,67 @@ document.getElementById("skeletonSlider");
 const meshSlider =
 document.getElementById("meshSlider");
 
-const animationSelect =
-document.getElementById("animationSelect");
-
-const playAnimationButton =
-document.getElementById("playAnimation");
+const animationLoader =
+document.getElementById("animationLoader");
 
 
-// ----------------------------
-// GLOBAL DATA
-// ----------------------------
+// ==================================================
+// ENGINE STATE
+// ==================================================
 
-let image=null;
+let image = null;
 
-let joints={};
+let joints = {};
 
-let basePose={};
+let basePose = {};
 
-
-let selectedJoint=null;
-
-
-let mesh=[];
-
-let meshReady=false;
+let selectedJoint = null;
 
 
-let skeletonOpacity=1;
+let mesh = [];
 
-let meshOpacity=1;
+let meshReady = false;
+
+
+let skeletonOpacity = 1;
+
+let meshOpacity = 1;
 
 
 
-let animation=null;
+let breathing = false;
 
-let animationPlaying=false;
-
-let animationTime=0;
+let walking = false;
 
 
-
-const MESH_SIZE=40;
-
+let animationTime = 0;
 
 
-// ----------------------------
+const MESH_SIZE = 40;
+
+
+
+// ==================================================
 // BONES
-// ----------------------------
+// ==================================================
 
-const BONES=[
-
+const BONES = [
 
 ["nose","neck"],
-
 
 ["neck","left_shoulder"],
 ["neck","right_shoulder"],
 
-
 ["left_shoulder","left_elbow"],
 ["left_elbow","left_wrist"],
-
 
 ["right_shoulder","right_elbow"],
 ["right_elbow","right_wrist"],
 
-
 ["left_hip","right_hip"],
-
 
 ["left_hip","left_knee"],
 ["left_knee","left_ankle"],
-
 
 ["right_hip","right_knee"],
 ["right_knee","right_ankle"]
@@ -121,39 +109,30 @@ const BONES=[
 
 
 
-
-
 // ==================================================
-// IMAGE LOADER
+// IMAGE LOADING
 // ==================================================
 
+if(imageLoader){
 
 imageLoader.onchange=function(e){
 
-
 let file=e.target.files[0];
-
 
 if(!file)
 return;
 
 
-
 let img=new Image();
-
 
 
 img.onload=function(){
 
-
 image=img;
-
 
 draw();
 
-
 };
-
 
 
 img.src=
@@ -163,77 +142,23 @@ URL.createObjectURL(file);
 };
 
 
-
-
-
-// ==================================================
-// POSE LOADER
-// ==================================================
-
-
-poseLoader.onchange=function(e){
-
-
-let reader=
-new FileReader();
-
-
-
-reader.onload=function(){
-
-
-let data=
-JSON.parse(reader.result);
-
-
-
-joints=data.joints;
-
-
-
-basePose=
-JSON.parse(
-JSON.stringify(joints)
-);
-
-
-
-meshReady=false;
-
-mesh=[];
-
-
-draw();
-
-
-};
-
-
-
-reader.readAsText(
-e.target.files[0]
-);
-
-
-};
-
+}
 
 
 
 
 // ==================================================
-// CREATE DEFAULT POSE
+// DEFAULT POSE
 // ==================================================
 
+function createDefaultPose(){
 
-newPoseButton.onclick=function(){
 
-
-let cx=
+let cx =
 canvas.width/2;
 
 
-let cy=
+let cy =
 canvas.height/2;
 
 
@@ -274,13 +199,10 @@ right_ankle:[50,230]
 
 
 
-
 joints={};
 
 
-
 for(let n in p){
-
 
 joints[n]={
 
@@ -292,21 +214,249 @@ cy+p[n][1]
 
 };
 
-
 }
 
 
 
-basePose=
+basePose =
 JSON.parse(
 JSON.stringify(joints)
 );
 
 
 
+mesh=[];
+
 meshReady=false;
 
+
+draw();
+
+
+}
+
+
+
+
+// ==================================================
+// NEW POSE BUTTON
+// ==================================================
+
+if(newPoseButton){
+
+newPoseButton.onclick=function(){
+
+createDefaultPose();
+
+};
+
+}
+
+
+
+// ==================================================
+// LOAD POSE
+// ==================================================
+
+if(poseLoader){
+
+poseLoader.onchange=function(e){
+
+
+let reader =
+new FileReader();
+
+
+
+reader.onload=function(){
+
+
+let data =
+JSON.parse(reader.result);
+
+
+
+joints=data.joints;
+
+
+
+basePose =
+JSON.parse(
+JSON.stringify(joints)
+);
+
+
+
 mesh=[];
+
+meshReady=false;
+
+
+draw();
+
+
+};
+
+
+
+reader.readAsText(
+e.target.files[0]
+);
+
+
+};
+
+}
+
+
+
+// ==================================================
+// SAVE POSE
+// ==================================================
+
+if(savePoseButton){
+
+savePoseButton.onclick=function(){
+
+
+let data={
+
+version:"V12",
+
+joints:joints
+
+};
+
+
+
+let blob =
+new Blob(
+
+[
+JSON.stringify(
+data,
+null,
+2
+)
+],
+
+{
+type:"application/json"
+}
+
+);
+
+
+
+let a =
+document.createElement("a");
+
+
+a.href =
+URL.createObjectURL(blob);
+
+
+a.download =
+"pose.json";
+
+
+a.click();
+
+
+
+};
+
+
+}
+
+// ==================================================
+// JOINT DRAGGING
+// ==================================================
+
+canvas.onmousedown=function(e){
+
+
+let r =
+canvas.getBoundingClientRect();
+
+
+
+let x =
+(e.clientX-r.left)
+*
+canvas.width/r.width;
+
+
+
+let y =
+(e.clientY-r.top)
+*
+canvas.height/r.height;
+
+
+
+for(let n in joints){
+
+
+let j=joints[n];
+
+
+if(
+Math.hypot(
+x-j.x,
+y-j.y
+)<20
+){
+
+
+selectedJoint=n;
+
+
+return;
+
+
+}
+
+
+
+}
+
+
+
+};
+
+
+
+
+
+canvas.onmousemove=function(e){
+
+
+if(!selectedJoint)
+return;
+
+
+
+let r =
+canvas.getBoundingClientRect();
+
+
+
+joints[selectedJoint].x =
+(e.clientX-r.left)
+*
+canvas.width/r.width;
+
+
+
+joints[selectedJoint].y =
+(e.clientY-r.top)
+*
+canvas.height/r.height;
+
+
+
+updateMesh();
 
 
 draw();
@@ -317,77 +467,406 @@ draw();
 
 
 
-// ==================================================
-// SAVE POSE
-// ==================================================
 
+canvas.onmouseup=function(){
 
-savePoseButton.onclick=function(){
-
-
-let data={
-
-version:"V11",
-
-joints:joints
+selectedJoint=null;
 
 };
 
 
 
-let blob=
-new Blob(
-[
-JSON.stringify(
-data,
-null,
-2
-)
-],
-{
-type:"application/json"
+
+
+// ==================================================
+// SLIDERS
+// ==================================================
+
+if(skeletonSlider){
+
+skeletonSlider.oninput=function(){
+
+
+skeletonOpacity =
+this.value/100;
+
+
+draw();
+
+
+};
+
 }
+
+
+
+if(meshSlider){
+
+meshSlider.oninput=function(){
+
+
+meshOpacity =
+this.value/100;
+
+
+draw();
+
+
+};
+
+}
+
+
+
+// ==================================================
+// CREATE IMAGE MESH
+// ==================================================
+
+if(createMeshButton){
+
+createMeshButton.onclick=function(){
+
+createMesh();
+
+};
+
+}
+
+
+
+
+function createMesh(){
+
+
+mesh=[];
+
+
+
+for(
+let y=0;
+y<=canvas.height;
+y+=MESH_SIZE
+){
+
+
+for(
+let x=0;
+x<=canvas.width;
+x+=MESH_SIZE
+){
+
+
+
+mesh.push({
+
+x:x,
+
+y:y,
+
+
+originalX:x,
+
+originalY:y,
+
+
+u:
+(x/canvas.width)
+*
+image.width,
+
+
+v:
+(y/canvas.height)
+*
+image.height,
+
+
+bone:null
+
+
+});
+
+
+
+}
+
+
+
+}
+
+
+
+bindMesh();
+
+
+meshReady=true;
+
+
+draw();
+
+
+
+console.log(
+"Mesh created:",
+mesh.length
+);
+
+
+}
+
+
+
+
+
+
+
+// ==================================================
+// BIND MESH TO BONES
+// ==================================================
+
+function bindMesh(){
+
+
+
+for(let p of mesh){
+
+
+let closest=null;
+
+
+let shortest=Infinity;
+
+
+
+for(let b of BONES){
+
+
+
+let a =
+joints[b[0]];
+
+
+let c =
+joints[b[1]];
+
+
+
+if(!a || !c)
+continue;
+
+
+
+let d =
+distanceToLine(
+p,
+a,
+c
 );
 
 
 
-let a=
-document.createElement("a");
+if(d<shortest){
 
 
-a.href=
-URL.createObjectURL(blob);
+shortest=d;
 
 
-a.download="pose.json";
+closest=b;
 
 
-a.click();
+}
 
 
-};
 
+}
+
+
+
+p.bone=closest;
+
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+// ==================================================
+// DISTANCE TO BONE
+// ==================================================
+
+function distanceToLine(p,a,b){
+
+
+
+let x =
+b.x-a.x;
+
+
+let y =
+b.y-a.y;
+
+
+
+let length =
+x*x+y*y;
+
+
+
+if(length===0)
+return Infinity;
+
+
+
+let t =
+(
+(p.x-a.x)*x+
+(p.y-a.y)*y
+)
+/
+length;
+
+
+
+t =
+Math.max(
+0,
+Math.min(
+1,
+t
+)
+);
+
+
+
+let px =
+a.x+t*x;
+
+
+let py =
+a.y+t*y;
+
+
+
+return Math.sqrt(
+
+(p.x-px)*(p.x-px)+
+
+(p.y-py)*(p.y-py)
+
+);
+
+
+
+}
+
+
+
+
+
+// ==================================================
+// UPDATE MESH FROM POSE
+// ==================================================
+
+function updateMesh(){
+
+
+
+if(!meshReady)
+return;
+
+
+
+for(let p of mesh){
+
+
+
+if(!p.bone)
+continue;
+
+
+
+let a =
+joints[p.bone[0]];
+
+
+let b =
+joints[p.bone[1]];
+
+
+
+let ra =
+basePose[p.bone[0]];
+
+
+let rb =
+basePose[p.bone[1]];
+
+
+
+if(!ra || !rb)
+continue;
+
+
+
+let dx =
+(
+(a.x-ra.x)+
+(b.x-rb.x)
+)/2;
+
+
+
+let dy =
+(
+(a.y-ra.y)+
+(b.y-rb.y)
+)/2;
+
+
+
+p.x =
+p.originalX+dx;
+
+
+p.y =
+p.originalY+dy;
+
+
+
+}
+
+
+
+}
+
+// Part 2/4
 // ==================================================
 // JOINT DRAGGING
 // ==================================================
 
-
 canvas.onmousedown=function(e){
 
 
-    let r=
+    let r =
     canvas.getBoundingClientRect();
     
     
     
-    let x=
+    let x =
     (e.clientX-r.left)
     *
     canvas.width/r.width;
     
     
     
-    let y=
+    let y =
     (e.clientY-r.top)
     *
     canvas.height/r.height;
@@ -417,11 +896,12 @@ canvas.onmousedown=function(e){
     }
     
     
+    
     }
     
     
-    };
     
+    };
     
     
     
@@ -435,19 +915,19 @@ canvas.onmousedown=function(e){
     
     
     
-    let r=
+    let r =
     canvas.getBoundingClientRect();
     
     
     
-    joints[selectedJoint].x=
+    joints[selectedJoint].x =
     (e.clientX-r.left)
     *
     canvas.width/r.width;
     
     
     
-    joints[selectedJoint].y=
+    joints[selectedJoint].y =
     (e.clientY-r.top)
     *
     canvas.height/r.height;
@@ -468,9 +948,7 @@ canvas.onmousedown=function(e){
     
     canvas.onmouseup=function(){
     
-    
     selectedJoint=null;
-    
     
     };
     
@@ -478,17 +956,16 @@ canvas.onmousedown=function(e){
     
     
     
-    
-    
     // ==================================================
-    // OPACITY CONTROL
+    // SLIDERS
     // ==================================================
     
+    if(skeletonSlider){
     
     skeletonSlider.oninput=function(){
     
     
-    skeletonOpacity=
+    skeletonOpacity =
     this.value/100;
     
     
@@ -497,13 +974,16 @@ canvas.onmousedown=function(e){
     
     };
     
+    }
     
     
+    
+    if(meshSlider){
     
     meshSlider.oninput=function(){
     
     
-    meshOpacity=
+    meshOpacity =
     this.value/100;
     
     
@@ -512,25 +992,23 @@ canvas.onmousedown=function(e){
     
     };
     
-    
-    
-    
+    }
     
     
     
     // ==================================================
-    // CREATE MESH
+    // CREATE IMAGE MESH
     // ==================================================
     
+    if(createMeshButton){
     
     createMeshButton.onclick=function(){
     
-    
     createMesh();
-    
     
     };
     
+    }
     
     
     
@@ -541,21 +1019,18 @@ canvas.onmousedown=function(e){
     mesh=[];
     
     
-    let step=MESH_SIZE;
-    
-    
     
     for(
     let y=0;
     y<=canvas.height;
-    y+=step
+    y+=MESH_SIZE
     ){
     
     
     for(
     let x=0;
     x<=canvas.width;
-    x+=step
+    x+=MESH_SIZE
     ){
     
     
@@ -567,7 +1042,10 @@ canvas.onmousedown=function(e){
     y:y,
     
     
-    // texture coordinates
+    originalX:x,
+    
+    originalY:y,
+    
     
     u:
     (x/canvas.width)
@@ -581,22 +1059,18 @@ canvas.onmousedown=function(e){
     image.height,
     
     
-    
-    originalX:x,
-    
-    originalY:y,
-    
-    
     bone:null
     
     
     });
     
     
-    }
     
     }
     
+    
+    
+    }
     
     
     
@@ -606,8 +1080,8 @@ canvas.onmousedown=function(e){
     meshReady=true;
     
     
-    
     draw();
+    
     
     
     console.log(
@@ -628,12 +1102,11 @@ canvas.onmousedown=function(e){
     // BIND MESH TO BONES
     // ==================================================
     
-    
     function bindMesh(){
     
     
-    for(let p of mesh){
     
+    for(let p of mesh){
     
     
     let closest=null;
@@ -643,13 +1116,16 @@ canvas.onmousedown=function(e){
     
     
     
-    
     for(let b of BONES){
     
     
-    let a=joints[b[0]];
     
-    let c=joints[b[1]];
+    let a =
+    joints[b[0]];
+    
+    
+    let c =
+    joints[b[1]];
     
     
     
@@ -658,8 +1134,7 @@ canvas.onmousedown=function(e){
     
     
     
-    
-    let d=
+    let d =
     distanceToLine(
     p,
     a,
@@ -700,26 +1175,24 @@ canvas.onmousedown=function(e){
     
     
     
-    
-    
     // ==================================================
     // DISTANCE TO BONE
     // ==================================================
     
-    
     function distanceToLine(p,a,b){
     
     
-    let x=
+    
+    let x =
     b.x-a.x;
     
     
-    let y=
+    let y =
     b.y-a.y;
     
     
     
-    let length=
+    let length =
     x*x+y*y;
     
     
@@ -729,7 +1202,7 @@ canvas.onmousedown=function(e){
     
     
     
-    let t=
+    let t =
     (
     (p.x-a.x)*x+
     (p.y-a.y)*y
@@ -739,7 +1212,8 @@ canvas.onmousedown=function(e){
     
     
     
-    t=Math.max(
+    t =
+    Math.max(
     0,
     Math.min(
     1,
@@ -749,11 +1223,11 @@ canvas.onmousedown=function(e){
     
     
     
-    let px=
+    let px =
     a.x+t*x;
     
     
-    let py=
+    let py =
     a.y+t*y;
     
     
@@ -774,14 +1248,12 @@ canvas.onmousedown=function(e){
     
     
     
-    
-    
     // ==================================================
-    // UPDATE MESH FROM JOINTS
+    // UPDATE MESH FROM POSE
     // ==================================================
-    
     
     function updateMesh(){
+    
     
     
     if(!meshReady)
@@ -798,23 +1270,21 @@ canvas.onmousedown=function(e){
     
     
     
-    let a=
+    let a =
     joints[p.bone[0]];
     
     
-    let b=
+    let b =
     joints[p.bone[1]];
     
     
     
-    
-    let ra=
+    let ra =
     basePose[p.bone[0]];
     
     
-    let rb=
+    let rb =
     basePose[p.bone[1]];
-    
     
     
     
@@ -823,7 +1293,7 @@ canvas.onmousedown=function(e){
     
     
     
-    let dx=
+    let dx =
     (
     (a.x-ra.x)+
     (b.x-rb.x)
@@ -831,7 +1301,7 @@ canvas.onmousedown=function(e){
     
     
     
-    let dy=
+    let dy =
     (
     (a.y-ra.y)+
     (b.y-rb.y)
@@ -839,12 +1309,11 @@ canvas.onmousedown=function(e){
     
     
     
-    
-    p.x=
+    p.x =
     p.originalX+dx;
     
     
-    p.y=
+    p.y =
     p.originalY+dy;
     
     
@@ -855,11 +1324,14 @@ canvas.onmousedown=function(e){
     
     }
 
-
+    //Part 3/4
+    // ==================================================
+// DRAW IMAGE
 // ==================================================
-// IMAGE DRAW THROUGH DEFORMABLE MESH
-// ==================================================
 
+// =======================
+// DRAW DEFORMED IMAGE
+// =======================
 
 function drawImage(){
 
@@ -869,7 +1341,7 @@ function drawImage(){
     
     
     
-    // before mesh exists
+    // no mesh yet = normal image
     
     if(!meshReady){
     
@@ -891,77 +1363,63 @@ function drawImage(){
     
     return;
     
-    
     }
     
     
     
     
     let cols =
-    Math.floor(canvas.width/MESH_SIZE)+1;
+    Math.floor(canvas.width / MESH_SIZE) + 1;
     
     
     let rows =
-    Math.floor(canvas.height/MESH_SIZE)+1;
+    Math.floor(canvas.height / MESH_SIZE) + 1;
     
     
     
-    
-    for(
-    let y=0;
-    y<rows-1;
-    y++
-    ){
+    for(let y=0; y<rows-1; y++){
     
     
-    for(
-    let x=0;
-    x<cols-1;
-    x++
-    ){
+    for(let x=0; x<cols-1; x++){
     
     
     
-    let i=
+    let i =
     y*cols+x;
     
     
     
-    let p1=mesh[i];
+    let p1 = mesh[i];
     
-    let p2=mesh[i+1];
+    let p2 = mesh[i+1];
     
-    let p3=mesh[i+cols];
+    let p3 = mesh[i+cols];
     
-    let p4=mesh[i+cols+1];
-    
-    
+    let p4 = mesh[i+cols+1];
     
     
-    // triangle A
+    
+    if(!p1 || !p2 || !p3 || !p4)
+    continue;
+    
+    
+    
+    // triangle 1
     
     drawTriangle(
-    
     p1,
-    
     p2,
-    
     p3
-    
     );
     
     
     
-    // triangle B
+    // triangle 2
     
     drawTriangle(
-    
     p2,
-    
     p4,
-    
     p3
-    
     );
     
     
@@ -974,22 +1432,16 @@ function drawImage(){
     
     
     
-    }
-    
-    
-    
-    
+    } 
     
     
     
     
     // ==================================================
-    // TRIANGLE TEXTURE MAPPING
+    // TEXTURE TRIANGLE
     // ==================================================
-    
     
     function drawTriangle(p0,p1,p2){
-    
     
     
     let sx0=p0.u;
@@ -1021,17 +1473,13 @@ function drawImage(){
     let denom =
     
     sx0*(sy1-sy2)+
-    
     sx1*(sy2-sy0)+
-    
     sx2*(sy0-sy1);
     
     
     
     if(denom===0)
     return;
-    
-    
     
     
     
@@ -1065,7 +1513,6 @@ function drawImage(){
     
     
     
-    
     let d =
     (
     dy0*(sy1-sy2)+
@@ -1096,13 +1543,9 @@ function drawImage(){
     
     
     
-    
-    
     ctx.save();
     
     
-    
-    // clip triangle
     
     ctx.beginPath();
     
@@ -1123,10 +1566,7 @@ function drawImage(){
     
     ctx.closePath();
     
-    
     ctx.clip();
-    
-    
     
     
     
@@ -1143,19 +1583,11 @@ function drawImage(){
     
     
     
-    // draw complete image
-    
     ctx.drawImage(
-    
     image,
-    
     0,
-    
     0
-    
     );
-    
-    
     
     
     
@@ -1164,14 +1596,12 @@ function drawImage(){
     
     
     ctx.setTransform(
-    
     1,
     0,
     0,
     1,
     0,
     0
-    
     );
     
     
@@ -1182,19 +1612,15 @@ function drawImage(){
     
     
     
-    
     // ==================================================
-    // DEBUG MESH VIEW
+    // DRAW MESH DEBUG
     // ==================================================
-    
     
     function drawMesh(){
     
     
-    
     if(!meshReady)
     return;
-    
     
     
     if(meshOpacity<=0)
@@ -1205,21 +1631,17 @@ function drawImage(){
     ctx.save();
     
     
-    ctx.globalAlpha=
+    ctx.globalAlpha =
     meshOpacity;
     
     
     
-    ctx.strokeStyle=
+    ctx.strokeStyle =
     "cyan";
     
     
-    ctx.fillStyle=
+    ctx.fillStyle =
     "cyan";
-    
-    
-    ctx.lineWidth=1;
-    
     
     
     
@@ -1228,45 +1650,26 @@ function drawImage(){
     
     
     
-    
-    for(
-    let i=0;
-    i<mesh.length;
-    i++
-    ){
+    for(let i=0;i<mesh.length;i++){
     
     
-    
-    let p=
-    mesh[i];
+    let p=mesh[i];
     
     
     
     ctx.beginPath();
     
-    
     ctx.arc(
-    
     p.x,
-    
     p.y,
-    
     2,
-    
     0,
-    
     Math.PI*2
-    
     );
-    
     
     ctx.fill();
     
     
-    
-    
-    
-    // horizontal
     
     if(
     i+1<mesh.length &&
@@ -1276,32 +1679,21 @@ function drawImage(){
     
     ctx.beginPath();
     
-    
     ctx.moveTo(
     p.x,
     p.y
     );
     
-    
     ctx.lineTo(
-    
     mesh[i+1].x,
-    
     mesh[i+1].y
-    
     );
-    
     
     ctx.stroke();
     
     
     }
     
-    
-    
-    
-    
-    // vertical
     
     
     if(
@@ -1311,21 +1703,15 @@ function drawImage(){
     
     ctx.beginPath();
     
-    
     ctx.moveTo(
     p.x,
     p.y
     );
     
-    
     ctx.lineTo(
-    
     mesh[i+cols].x,
-    
     mesh[i+cols].y
-    
     );
-    
     
     ctx.stroke();
     
@@ -1338,131 +1724,382 @@ function drawImage(){
     
     
     
-    
     ctx.restore();
+    
+    
+    }
+    
+    
+    
+    
+    
+    
+    // ==================================================
+    // DRAW SKELETON
+    // ==================================================
+    
+    function drawSkeleton(){
+    
+    
+    
+    if(skeletonOpacity<=0)
+    return;
+    
+    
+    
+    ctx.save();
+    
+    
+    
+    ctx.globalAlpha =
+    skeletonOpacity;
+    
+    
+    
+    ctx.strokeStyle =
+    "#d6a34a";
+    
+    
+    ctx.lineWidth=4;
+    
+    
+    
+    for(let b of BONES){
+    
+    
+    
+    let a =
+    joints[b[0]];
+    
+    
+    let c =
+    joints[b[1]];
+    
+    
+    
+    if(!a || !c)
+    continue;
+    
+    
+    
+    ctx.beginPath();
+    
+    ctx.moveTo(
+    a.x,
+    a.y
+    );
+    
+    
+    ctx.lineTo(
+    c.x,
+    c.y
+    );
+    
+    
+    ctx.stroke();
+    
+    
+    }
+    
+    
+    
+    
+    
+    for(let n in joints){
+    
+    
+    let j=joints[n];
+    
+    
+    ctx.fillStyle="red";
+    
+    
+    ctx.beginPath();
+    
+    ctx.arc(
+    j.x,
+    j.y,
+    6,
+    0,
+    Math.PI*2
+    );
+    
+    
+    ctx.fill();
     
     
     
     }
+    
+    
+    
+    ctx.restore();
+    
+    
+    }
+    
+    
+    
+    
+    
+    
+    // ==================================================
+    // MAIN DRAW
+    // ==================================================
+    
+   // =======================
+// MAIN DRAW
+// =======================
+
+function draw(){
 
 
+    ctx.clearRect(
+    
+    0,
+    
+    0,
+    
+    canvas.width,
+    
+    canvas.height
+    
+    );
+    
+    
+    
+    
+    // REAL OUTPUT
+    
+    drawImage();
+    
+    
+    
+    
+    
+    // DEBUG MESH ONLY
+    
+    if(meshOpacity > 0){
+    
+    ctx.globalAlpha =
+    meshOpacity;
+    
+    drawMesh();
+    
+    ctx.globalAlpha = 1;
+    
+    }
+    
+    
+    
+    
+    
+    // DEBUG SKELETON ONLY
+    
+    if(skeletonOpacity > 0){
+    
+    ctx.globalAlpha =
+    skeletonOpacity;
+    
+    drawSkeleton();
+    
+    ctx.globalAlpha = 1;
+    
+    }
+    
+    
+    
+    }
+    
+    
+    
+    
+    
+    
+    
+    // ==================================================
+    // PROCEDURAL ANIMATION
+    // ==================================================
+    
+    function updateAnimation(){
+    
+    
+    
+    if(
+    !breathing &&
+    !walking
+    )
+    return;
+    
+    
+    
+    animationTime +=0.03;
+    
+    
+    
+    let breath =
+    Math.sin(animationTime*2)
+    *
+    (
+    breathing ? 5 : 0
+    );
+    
+    
+    
+    let walk =
+    Math.sin(animationTime)
+    *
+    (
+    walking ? 20 : 0
+    );
+    
+    
+    
+    if(joints.neck){
+    
+    
+    joints.neck.y =
+    basePose.neck.y -
+    breath;
+    
+    
+    }
+    
+    
+    
+    
+    if(walking){
+    
+    
+    if(joints.left_knee)
+    
+    joints.left_knee.x =
+    basePose.left_knee.x +
+    walk;
+    
+    
+    
+    if(joints.right_knee)
+    
+    joints.right_knee.x =
+    basePose.right_knee.x -
+    walk;
+    
+    
+    
+    if(joints.left_ankle)
+    
+    joints.left_ankle.x =
+    basePose.left_ankle.x -
+    walk;
+    
+    
+    
+    if(joints.right_ankle)
+    
+    joints.right_ankle.x =
+    basePose.right_ankle.x +
+    walk;
+    
+    
+    
+    }
+    
+    
+    
+    updateMesh();
+    
+    
+    }
+
+    //Part 4/4
+    // ==================================================
+// ANIMATION BUTTONS
 // ==================================================
-// ANIMATION SYSTEM
-// ==================================================
+
+const breathButton =
+document.getElementById("breathButton");
 
 
-let animationPlaying=false;
-
-let currentAnimation="";
-
-let animationSpeed=1;
+const walkButton =
+document.getElementById("walkButton");
 
 
 
-let animations={
+
+
+if(breathButton){
+
+
+breathButton.onclick=function(){
+
+
+breathing =
+!breathing;
+
+
+
+this.innerHTML =
+breathing ?
+"Breathing ON" :
+"Breathing OFF";
+
+
 
 };
 
 
 
-
-// ==================================================
-// SAVE CURRENT ANIMATION
-// ==================================================
+}
 
 
-function saveAnimation(name){
 
 
-let data={
+
+if(walkButton){
 
 
-version:"V10_ANIMATION",
+walkButton.onclick=function(){
 
 
-name:name,
+walking =
+!walking;
 
 
-frames:[]
+
+this.innerHTML =
+walking ?
+"Walking ON" :
+"Walking OFF";
+
 
 
 };
 
 
 
-for(let n in joints){
-
-
-data.frames.push({
-
-joint:n,
-
-x:joints[n].x,
-
-y:joints[n].y
-
-});
-
-
 }
-
-
-
-let blob=
-new Blob(
-
-[
-JSON.stringify(
-data,
-null,
-2
-)
-],
-
-{
-type:"application/json"
-}
-
-);
-
-
-
-let a=
-document.createElement("a");
-
-
-
-a.href=
-URL.createObjectURL(blob);
-
-
-
-a.download=
-name+".json";
-
-
-
-a.click();
-
-
-
-}
-
-
 
 
 
 
 
 // ==================================================
-// LOAD ANIMATION JSON
+// STYLE ANIMATION LOADER
 // ==================================================
+
+let styles={};
+
+
+
+if(animationLoader){
 
 
 animationLoader.onchange=function(e){
 
 
-let reader=
+
+let reader =
 new FileReader();
 
 
@@ -1470,22 +2107,25 @@ new FileReader();
 reader.onload=function(){
 
 
-let data=
+
+let data =
 JSON.parse(reader.result);
 
 
 
-animations[data.name]=data;
-
-
-
-currentAnimation=data.name;
+styles[data.name]=data;
 
 
 
 console.log(
-"Animation loaded:",
+"Style loaded:",
 data.name
+);
+
+
+
+applyStyle(
+data
 );
 
 
@@ -1504,237 +2144,73 @@ e.target.files[0]
 
 
 
+}
 
 
 
 
 
-// ==================================================
-// PROCEDURAL MOVEMENT
-// ==================================================
-
-
-function animateBody(){
+function applyStyle(data){
 
 
 
-if(!animationPlaying)
+if(!data.frames)
 return;
 
 
 
-animationTime +=
-0.03*
-animationSpeed;
-
-
-
-let t=
-animationTime;
-
-
-
-// --------------------
-// BREATHING
-// --------------------
-
-
-let breath =
-Math.sin(t*2)
-*
-6;
-
-
-
-if(joints.neck){
-
-
-joints.neck.y =
-basePose.neck.y
--
-breath;
-
-
-}
+console.log(
+"Applying style:",
+data.name
+);
 
 
 
 
-
-// --------------------
-// TECHNO HIP HOP BODY
-// --------------------
+// simple first frame support
+// later upgraded to timeline system
 
 
-if(currentAnimation==="hiphop"){
-
-
-
-let bounce =
-Math.sin(t*4)
-*
-12;
+let frame =
+data.frames[0];
 
 
 
-let arm =
-Math.sin(t*3)
-*
-25;
+if(!frame)
+return;
 
 
 
-joints.left_shoulder.y =
-basePose.left_shoulder.y
-+
-bounce;
+for(let n in frame){
 
 
-joints.right_shoulder.y =
-basePose.right_shoulder.y
-+
-bounce;
+if(
+joints[n]
+&&
+frame[n].x!==undefined
+){
 
 
-
-joints.left_elbow.x =
-basePose.left_elbow.x
--
-arm;
+joints[n].x =
+frame[n].x;
 
 
-joints.right_elbow.x =
-basePose.right_elbow.x
-+
-arm;
-
+joints[n].y =
+frame[n].y;
 
 
 }
 
 
 
-
-
-// --------------------
-// WALK CYCLE
-// --------------------
-
-
-if(currentAnimation==="walk"){
-
-
-
-let step =
-Math.sin(t*3)
-*
-30;
-
-
-
-joints.left_knee.x =
-basePose.left_knee.x
-+
-step;
-
-
-joints.right_knee.x =
-basePose.right_knee.x
--
-step;
-
-
-
-joints.left_ankle.x =
-basePose.left_ankle.x
--
-step;
-
-
-joints.right_ankle.x =
-basePose.right_ankle.x
-+
-step;
-
-
-
 }
-
-
-
-
-
-// --------------------
-// CEREMONY MOVEMENT
-// --------------------
-
-
-if(currentAnimation==="ceremony"){
-
-
-
-let wave =
-Math.sin(t)
-*
-20;
-
-
-
-joints.left_wrist.y =
-basePose.left_wrist.y
-+
-wave;
-
-
-
-joints.right_wrist.y =
-basePose.right_wrist.y
--
-wave;
-
-
-
-let sway =
-Math.sin(t*2)
-*
-15;
-
-
-
-joints.neck.x =
-basePose.neck.x
-+
-sway;
-
-
-
-}
-
-
-
-
-
-// --------------------
-// RESET FROM BASE
-// --------------------
-
-
-if(currentAnimation==="breathing"){
-
-
-joints.neck.y =
-basePose.neck.y
--
-breath;
-
-
-}
-
 
 
 
 updateMesh();
 
+draw();
+
 
 
 }
@@ -1747,46 +2223,71 @@ updateMesh();
 
 
 // ==================================================
-// ANIMATION BUTTONS
+// SAVE ANIMATION STYLE
 // ==================================================
 
-
-document.getElementById("breathButton")
-.onclick=function(){
-
-
-animationPlaying=true;
-
-
-currentAnimation="breathing";
-
-
-this.innerHTML=
-"Breathing ON";
-
-
-};
+function saveStyle(name){
 
 
 
+let data={
 
 
+version:"V12_STYLE",
 
-document.getElementById("walkButton")
-.onclick=function(){
-
-
-animationPlaying=true;
+name:name,
 
 
-currentAnimation="walk";
+frames:[
 
+joints
 
-this.innerHTML=
-"Walking ON";
+]
 
 
 };
+
+
+
+let blob =
+new Blob(
+
+[
+JSON.stringify(
+data,
+null,
+2
+)
+],
+
+{
+type:"application/json"
+}
+
+);
+
+
+
+let a =
+document.createElement("a");
+
+
+
+a.href =
+URL.createObjectURL(blob);
+
+
+
+a.download =
+name+".json";
+
+
+
+a.click();
+
+
+
+}
 
 
 
@@ -1798,12 +2299,10 @@ this.innerHTML=
 // MAIN LOOP
 // ==================================================
 
-
 function loop(){
 
 
-
-animateBody();
+updateAnimations();
 
 
 
@@ -1811,12 +2310,23 @@ draw();
 
 
 
-requestAnimationFrame(loop);
+requestAnimationFrame(
+loop
+);
 
 
 
 }
 
+
+
+
+
+// ==================================================
+// INITIAL START
+// ==================================================
+
+createDefaultPose();
 
 
 loop();

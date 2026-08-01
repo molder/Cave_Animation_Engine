@@ -1,0 +1,137 @@
+// ==================================================
+// Cave Animation Engine
+// animation.js
+// ==================================================
+
+
+let animationSystem = {
+
+
+    current:null,
+
+    playing:false,
+
+    time:0,
+
+    speed:1,
+
+
+    animations:{}
+
+
+
+};
+
+
+
+
+// ==================================================
+// REGISTER ANIMATION
+// ==================================================
+
+function registerAnimation(name,callback){
+
+
+animationSystem.animations[name]=callback;
+
+
+console.log(
+"Animation registered:",
+name
+);
+
+
+}
+
+
+
+
+// ==================================================
+// PLAY
+// ==================================================
+
+function playAnimation(name){
+
+
+if(!animationSystem.animations[name]){
+
+
+console.warn(
+"Animation not found:",
+name
+);
+
+
+return;
+
+}
+
+
+
+animationSystem.current=name;
+
+animationSystem.playing=true;
+
+
+animationSystem.time=0;
+
+
+}
+
+
+
+
+
+
+// ==================================================
+// STOP
+// ==================================================
+
+function stopAnimation(){
+
+
+animationSystem.playing=false;
+
+
+}
+
+
+
+
+
+// ==================================================
+// UPDATE
+// ==================================================
+
+function updateAnimations(){
+
+
+
+if(!animationSystem.playing)
+return;
+
+
+
+animationSystem.time +=
+0.03 *
+animationSystem.speed;
+
+
+
+let fn =
+animationSystem.animations[
+animationSystem.current
+];
+
+
+
+if(fn){
+
+fn(
+animationSystem.time
+);
+
+}
+
+
+}
