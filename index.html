@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Cave Animation Engine V11</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial;
+}
+
+#toolbar{
+    background:#222;
+    padding:10px;
+}
+
+button,input,select{
+    margin:4px;
+    padding:6px;
+}
+
+
+canvas{
+    display:block;
+    margin:auto;
+    background:#333;
+}
+
+
+.slider{
+    width:200px;
+}
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div id="toolbar">
+
+
+<h3>
+Cave Animation Engine V11
+</h3>
+
+
+Image:
+
+<input 
+id="imageLoader"
+type="file"
+accept="image/*">
+
+
+<br>
+
+
+Pose:
+
+<input 
+id="poseLoader"
+type="file"
+accept=".json">
+
+
+<button id="newPose">
+New Pose
+</button>
+
+
+<button id="savePose">
+Save Pose
+</button>
+
+
+<br>
+
+
+<button id="createMesh">
+Create Mesh
+</button>
+
+
+<br>
+
+
+Animation:
+
+<select id="animationSelect">
+
+<option value="">
+None
+</option>
+
+<option value="breathing">
+Breathing
+</option>
+
+<option value="hiphop">
+Hip Hop
+</option>
+
+<option value="techno">
+Techno
+</option>
+
+<option value="walking">
+Walking
+</option>
+
+<option value="ceremony">
+Ceremony
+</option>
+
+
+</select>
+
+
+<button id="playAnimation">
+Play
+</button>
+
+
+<br>
+
+
+Skeleton:
+
+<input
+class="slider"
+id="skeletonSlider"
+type="range"
+min="0"
+max="100"
+value="100">
+
+
+<br>
+
+
+Mesh:
+
+<input
+class="slider"
+id="meshSlider"
+type="range"
+min="0"
+max="100"
+value="100">
+
+
+
+</div>
+
+
+
+<canvas 
+id="canvas"
+width="600"
+height="600">
+</canvas>
+
+
+
+<script src="engine.js"></script>
+
+
+</body>
+
+</html>
