@@ -17,27 +17,98 @@
 import json
 import os
 
-
+from config import CAVE_STYLE_FOLDER
 
 # ==================================================
-# INPUT CHOP TO DAT
+# EXPORT SETTINGS
 # ==================================================
 
-# Change this name if your CHOP to DAT has another name
+ANIMATION_NAME = "animation_01"
 
-source = op("/JSON_cam/slot1_data")
+TARGET_FRAMES = 600
+
+EXPORT_FOLDER = "./style"
+
+# ==================================================
+# INPUT CHOP TO DAT WITH FALLBACK
+# ==================================================
+
+SOURCE_PATHS = [
+
+    "/JSON_cam/slot1_data",
+
+    "/JSON_cam/slot1_export",
+
+    "/body_play/slot1_data",
+
+    "/body_play/sel_body_joints",
+
+    "/slot1_data"
+
+]
+
+
+source = None
+
+
+
+for path in SOURCE_PATHS:
+
+
+    candidate = op(path)
+
+
+    if candidate is not None:
+
+
+        source = candidate
+
+
+        print("--------------------------------")
+
+        print("INPUT FOUND:")
+
+        print(path)
+
+        print(
+            "Rows:",
+            source.numRows
+        )
+
+        print(
+            "Cols:",
+            source.numCols
+        )
+
+        print("--------------------------------")
+
+
+        break
+
+
 
 
 if source is None:
 
-    print("ERROR: slot1_data not found")
 
-else:
+    print("--------------------------------")
 
-    print("Input found:")
-    print(source.numRows)
-    print(source.numCols)
+    print("ERROR: No source DAT found")
 
+    print("Checked paths:")
+
+
+    for path in SOURCE_PATHS:
+
+        print(path)
+
+
+    print("--------------------------------")
+
+
+    raise Exception(
+        "Cave Animation Engine: Missing input DAT"
+    )
 
 
 # ==================================================
@@ -277,83 +348,82 @@ print(
 
 
 
+
+
+
+
+# ==================================================
+# RESAMPLE TO TARGET FRAMES
+# ==================================================
+
+if len(frames) > TARGET_FRAMES:
+
+    resampled = []
+
+    for i in range(TARGET_FRAMES):
+
+        index = round(
+
+            i *
+
+            (len(frames) - 1)
+
+            /
+
+            (TARGET_FRAMES - 1)
+
+        )
+
+        resampled.append(frames[index])
+
+    frames = resampled
+
+print("Original frames:", frame_count)
+print("Exported frames:", len(frames))
+
+
 # ==================================================
 # BUILD JSON STRUCTURE
 # ==================================================
 
-
 animation = {
 
+    "version": "CaveAnimation_V1",
 
-    "version":
+    "name": ANIMATION_NAME,
 
-    "CaveAnimation_V1",
+    "source": "TDYolo_slot1",
 
+    "fps": 60,
 
-
-    "name":
-
-    "recorded_take01",
-
-
-
-    "source":
-
-    "TDYolo_slot1",
-
-
-
-    "fps":
-
-    60,
-
-
-
-    "frames":
-
-    frames
-
+    "frames": frames
 
 }
 
 
-
 # ==================================================
-# SAVE INTO STYLE FOLDER
+# SAVE
 # ==================================================
 
-
-from config import CAVE_STYLE_FOLDER
-
-
-style_folder = CAVE_STYLE_FOLDER
+export_folder = CAVE_STYLE_FOLDER
 
 
-
-if not os.path.exists(style_folder):
-
-    os.makedirs(style_folder)
-
+os.makedirs(
+    export_folder,
+    exist_ok=True
+)
 
 
 output_file = os.path.join(
 
-    style_folder,
+    export_folder,
 
-    "animation_take01.json"
+    ANIMATION_NAME + ".json"
 
 )
 
 
-
-with open(
-
-    output_file,
-
-    "w"
-
-) as f:
-
+with open(output_file, "w") as f:
 
     json.dump(
 
@@ -361,16 +431,27 @@ with open(
 
         f,
 
-        indent=4
+        indent=2
 
     )
 
 
+print("--------------------------------")
 
-print("==============================")
+print("Export complete")
 
-print("EXPORT COMPLETE")
+print("Saved:")
+
+print(os.path.abspath(output_file))
+
+print("--------------------------------")
+
+print("--------------------------------")
+
+print("Export complete")
+
+print("Saved:")
 
 print(output_file)
 
-print("==============================")
+print("--------------------------------")

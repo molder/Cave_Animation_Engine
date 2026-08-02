@@ -15,6 +15,11 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 
+// =================================
+// GLOBAL IMAGE
+// =================================
+
+
 // ==================================================
 // UI REFERENCES
 // ==================================================
@@ -30,7 +35,6 @@ document.getElementById("newPose");
 
 const savePoseButton =
 document.getElementById("savePose");
-
 const createMeshButton =
 document.getElementById("createMesh");
 
@@ -75,6 +79,8 @@ let walking = false;
 
 let animationTime = 0;
 
+
+const GRID = 20;
 
 const MESH_SIZE = 40;
 
@@ -2218,7 +2224,47 @@ draw();
 
 
 
+// =================================
+// UI SHOW / HIDE
+// =================================
 
+const menu = document.getElementById("menu");
+
+const hideButton = document.getElementById("hideUI");
+
+
+
+
+function toggleUI(){
+
+    if (!menu) return;
+
+    menu.classList.toggle("hidden");
+
+}
+
+
+
+hideButton.onclick = toggleUI;
+
+
+
+// Keyboard shortcut
+
+window.addEventListener(
+    "keydown",
+    function(e){
+
+
+        if(e.key === "h"){
+
+            toggleUI();
+
+        }
+
+
+    }
+);
 
 
 

@@ -57,7 +57,7 @@ async function loadWalkingJSON(){
 
 
 
-        updateJSONole.log(
+        console.log(
             "Walking JSON loaded:",
             recordedWalking.frames.length,
             "frames"
@@ -86,10 +86,6 @@ loadWalkingJSON();
 
 
 
-loadWalkingJSON();
-
-
-
 
 
 // ==================================================
@@ -112,7 +108,7 @@ function selectAnimation(name){
 
 
 
-    updateJSONole.log(
+    console.log(
         "Animation:",
         name
     );
@@ -323,7 +319,7 @@ function walkingAnimation(t){
                 ){
 
 
-                    // DROPDOWN CONTROL
+                    joints[jointName].x =
                     frame[jointName][0]
                     *
                     canvas.width;

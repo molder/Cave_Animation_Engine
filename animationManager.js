@@ -13,7 +13,7 @@
 class AnimationManager {
 
 
-    updateJSONtructor(){
+    constructor(){
 
 
         this.currentName = "none";
@@ -453,7 +453,7 @@ updateJSON(){
 
             case "walking":
 
-                walkingAnimation(t);
+                this.walkingPreset(t);
 
             break;
 
@@ -505,6 +505,201 @@ updateJSON(){
 
             break;
 
+
+        }
+
+
+    }
+
+
+
+    // ==================================================
+    // WALKING PRESET (self-contained procedural gait)
+    // Used whenever no recorded JSON is loaded/available.
+    // Moves legs, arms, head and hips like a walking person.
+    // ==================================================
+
+    walkingPreset(t){
+
+
+        if(
+            !joints ||
+            !basePose ||
+            !basePose.left_hip
+        ){
+
+            return;
+
+        }
+
+
+        // DEFAULTS
+
+        let stepLength =
+        30 * this.intensity;
+
+
+        let armSwing =
+        25 * this.intensity;
+
+
+        let headBobAmount =
+        6 * this.intensity;
+
+
+        let cadence =
+        3.0;
+
+
+        let phase =
+        t * cadence * this.speed;
+
+
+
+        // LEGS (contralateral gait: left leg forward = right arm forward)
+
+        let legSwingL =
+        Math.sin(phase) * stepLength;
+
+
+        let kneeLiftL =
+        Math.max(0, Math.sin(phase)) * (stepLength * 0.4);
+
+
+        if(joints.left_knee && basePose.left_knee){
+
+            joints.left_knee.x =
+            basePose.left_knee.x + legSwingL;
+
+
+            joints.left_knee.y =
+            basePose.left_knee.y - kneeLiftL;
+
+        }
+
+
+        if(joints.left_ankle && basePose.left_ankle){
+
+            joints.left_ankle.x =
+            basePose.left_ankle.x + legSwingL * 1.3;
+
+        }
+
+
+
+        let legSwingR =
+        Math.sin(phase + Math.PI) * stepLength;
+
+
+        let kneeLiftR =
+        Math.max(0, Math.sin(phase + Math.PI)) * (stepLength * 0.4);
+
+
+        if(joints.right_knee && basePose.right_knee){
+
+            joints.right_knee.x =
+            basePose.right_knee.x + legSwingR;
+
+
+            joints.right_knee.y =
+            basePose.right_knee.y - kneeLiftR;
+
+        }
+
+
+        if(joints.right_ankle && basePose.right_ankle){
+
+            joints.right_ankle.x =
+            basePose.right_ankle.x + legSwingR * 1.3;
+
+        }
+
+
+
+        // ARMS (opposite phase to same-side leg)
+
+        let armSwingL =
+        Math.sin(phase + Math.PI) * armSwing;
+
+
+        let armSwingR =
+        Math.sin(phase) * armSwing;
+
+
+        if(joints.left_elbow && basePose.left_elbow){
+
+            joints.left_elbow.x =
+            basePose.left_elbow.x + armSwingL;
+
+        }
+
+
+        if(joints.left_wrist && basePose.left_wrist){
+
+            joints.left_wrist.x =
+            basePose.left_wrist.x + armSwingL * 1.4;
+
+        }
+
+
+        if(joints.right_elbow && basePose.right_elbow){
+
+            joints.right_elbow.x =
+            basePose.right_elbow.x + armSwingR;
+
+        }
+
+
+        if(joints.right_wrist && basePose.right_wrist){
+
+            joints.right_wrist.x =
+            basePose.right_wrist.x + armSwingR * 1.4;
+
+        }
+
+
+
+        // HEAD / NECK bob (double frequency, like a real gait)
+
+        let headBob =
+        Math.abs(Math.sin(phase * 2)) * headBobAmount;
+
+
+        if(joints.neck && basePose.neck){
+
+            joints.neck.y =
+            basePose.neck.y - headBob;
+
+        }
+
+
+        if(joints.nose && basePose.nose){
+
+            joints.nose.y =
+            basePose.nose.y - headBob;
+
+
+            joints.nose.x =
+            basePose.nose.x + Math.sin(phase) * (headBobAmount * 0.5);
+
+        }
+
+
+
+        // SUBTLE HIP SWAY
+
+        if(joints.left_hip && basePose.left_hip){
+
+            joints.left_hip.x =
+            basePose.left_hip.x + Math.sin(phase) * (stepLength * 0.2);
+
+        }
+
+
+        if(joints.right_hip && basePose.right_hip){
+
+            joints.right_hip.x =
+            basePose.right_hip.x + Math.sin(phase + Math.PI) * (stepLength * 0.2);
 
         }
 
