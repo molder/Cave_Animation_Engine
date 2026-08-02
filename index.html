@@ -103,7 +103,41 @@ Ceremony
 <button id="playAnimation">
 Play
 </button>
+<!-- Animation Controls -->
 
+<div class="animation-controls">
+
+
+    <label>
+    Intensity
+    <span id="intensityValue">50%</span>
+    </label>
+    
+    <input
+    id="animationIntensity"
+    type="range"
+    min="0"
+    max="100"
+    value="50"
+    >
+    
+    
+    
+    <label>
+    Speed
+    <span id="speedValue">100%</span>
+    </label>
+    
+    <input
+    id="animationSpeed"
+    type="range"
+    min="10"
+    max="200"
+    value="100"
+    >
+    
+    
+    </div>
 
 <br>
 
@@ -144,10 +178,12 @@ width="600"
 height="600">
 </canvas>
 
+<script src="animationManager.js"></script>
 
-<script src="menu_fx.js"></script>
 <script src="animation.js"></script>
 <script src="engine.js"></script>
+
+<script src="menu_fx.js"></script>
 
 
 </body>

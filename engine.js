@@ -2329,4 +2329,28 @@ loop
 createDefaultPose();
 
 
+function loop(){
+
+
+    console.log(
+        "ENGINE LOOP"
+    );
+
+
+    updateAnimations();
+
+
+    draw();
+
+
+    requestAnimationFrame(
+        loop
+    );
+
+
+}
+
+
+// START ENGINE
+
 loop();

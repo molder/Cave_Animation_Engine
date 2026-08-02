@@ -3,7 +3,7 @@
 // animation.js
 // ==================================================
 
-
+let animationIntensity = 0.5;
 // ==================================================
 // STATE
 // ==================================================
@@ -142,75 +142,35 @@ function stopAnimation(){
 
 
 
+
 // ==================================================
 // UPDATE ANIMATIONS
 // ==================================================
 
 function updateAnimations(){
 
-
-
-    if(!animationState.playing)
-
-    return;
-
-
-
-
-    animationState.time +=
-    0.03 *
-    animationState.speed;
-
-
+    console.log("UPDATE ANIMATIONS LOOP");
 
     let t =
-    animationState.time;
+    performance.now();
 
 
 
-
-    switch(animationState.current){
-
+    if(animationManager){
 
 
-        case "breathing":
-
-            breathingAnimation(t);
-
-        break;
+        animationManager.update(
+            t
+        );
 
 
-
-        case "walking":
-
-            walkingAnimation(t);
-
-        break;
+    }
+    else{
 
 
-
-        case "hiphop":
-
-            hipHopAnimation(t);
-
-        break;
-
-
-
-        case "techno":
-
-            technoAnimation(t);
-
-        break;
-
-
-
-        case "ceremony":
-
-            ceremonyAnimation(t);
-
-        break;
-
+        console.warn(
+            "AnimationManager not loaded"
+        );
 
 
     }
@@ -226,7 +186,6 @@ function updateAnimations(){
 
 
 }
-
 
 
 
@@ -350,7 +309,7 @@ function walkingAnimation(t){
                 ){
 
 
-                    joints[jointName].x =
+                    // DROPDOWN CONTROL
                     frame[jointName][0]
                     *
                     canvas.width;
@@ -609,11 +568,13 @@ document.getElementById(
 
 
 
+
+
+
 let playAnimationButton =
 document.getElementById(
 "playAnimation"
 );
-
 
 
 
@@ -627,12 +588,136 @@ if(playAnimationButton){
         if(animationSelect){
 
 
-            selectAnimation(
+            animationManager.load(
                 animationSelect.value
             );
 
 
         }
+
+
+    };
+
+
+}
+// ==================================================
+// ANIMATION SLIDERS
+// ==================================================
+
+
+let intensitySlider =
+document.getElementById(
+    "animationIntensity"
+);
+
+
+let intensityValue =
+document.getElementById(
+    "intensityValue"
+);
+
+
+
+if(intensitySlider){
+
+
+    intensitySlider.oninput =
+    function(){
+
+
+        let value =
+        this.value / 100;
+
+
+
+        if(animationManager){
+
+
+            animationManager.intensity =
+            value;
+
+
+        }
+
+
+
+        if(intensityValue){
+
+
+            intensityValue.innerHTML =
+            Math.round(value*100) + "%";
+
+
+        }
+
+
+        console.log(
+            "Intensity:",
+            value
+        );
+
+
+    };
+
+
+}
+
+
+
+
+
+
+let speedSlider =
+document.getElementById(
+    "animationSpeed"
+);
+
+
+
+let speedValue =
+document.getElementById(
+    "speedValue"
+);
+
+
+
+if(speedSlider){
+
+
+    speedSlider.oninput =
+    function(){
+
+
+        let value =
+        this.value / 100;
+
+
+
+        if(animationManager){
+
+
+            animationManager.speed =
+            value;
+
+
+        }
+
+
+
+        if(speedValue){
+
+
+            speedValue.innerHTML =
+            Math.round(value*100) + "%";
+
+
+        }
+
+
+        console.log(
+            "Speed:",
+            value
+        );
 
 
     };
