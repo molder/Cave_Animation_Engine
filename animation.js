@@ -4,6 +4,10 @@
 // ==================================================
 
 
+// ==================================================
+// STATE
+// ==================================================
+
 let animationState = {
 
     current:"none",
@@ -18,6 +22,75 @@ let animationState = {
 
 
 
+// ==================================================
+// RECORDED WALKING JSON
+// ==================================================
+
+let recordedWalking = null;
+
+let walkingFrame = 0;
+
+
+async function loadWalkingJSON(){
+
+
+    try{
+
+
+        let response =
+        await fetch(
+            "style/walking.json"
+        );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "walking.json not found"
+            );
+
+        }
+
+
+        recordedWalking =
+        await response.json();
+
+
+
+        console.log(
+            "Walking JSON loaded:",
+            recordedWalking.frames.length,
+            "frames"
+        );
+
+
+    }
+
+
+    catch(error){
+
+
+        console.error(
+            "Walking JSON loading failed:",
+            error
+        );
+
+
+    }
+
+
+}
+
+
+loadWalkingJSON();
+
+
+
+loadWalkingJSON();
+
+
+
+
 
 // ==================================================
 // SELECT ANIMATION
@@ -25,11 +98,18 @@ let animationState = {
 
 function selectAnimation(name){
 
+
     animationState.current = name;
+
 
     animationState.playing = true;
 
+
     animationState.time = 0;
+
+
+    walkingFrame = 0;
+
 
 
     console.log(
@@ -37,7 +117,9 @@ function selectAnimation(name){
         name
     );
 
+
 }
+
 
 
 
@@ -49,7 +131,9 @@ function selectAnimation(name){
 
 function stopAnimation(){
 
+
     animationState.playing=false;
+
 
 }
 
@@ -65,86 +149,83 @@ function stopAnimation(){
 function updateAnimations(){
 
 
-if(!animationState.playing)
-return;
+
+    if(!animationState.playing)
+
+    return;
 
 
 
-animationState.time +=
-0.03 *
-animationState.speed;
+
+    animationState.time +=
+    0.03 *
+    animationState.speed;
 
 
 
-let t =
-animationState.time;
+    let t =
+    animationState.time;
 
 
 
-switch(animationState.current){
+
+    switch(animationState.current){
 
 
 
-case "breathing":
+        case "breathing":
 
-    breathingAnimation(t);
+            breathingAnimation(t);
 
-break;
-
-
-
-case "walking":
-
-    walkingAnimation(t);
-
-break;
+        break;
 
 
 
-case "hiphop":
+        case "walking":
 
-    hipHopAnimation(t);
+            walkingAnimation(t);
 
-break;
-
-
-
-case "techno":
-
-    technoAnimation(t);
-
-break;
+        break;
 
 
 
-case "ceremony":
+        case "hiphop":
 
-    ceremonyAnimation(t);
+            hipHopAnimation(t);
 
-break;
+        break;
 
 
 
-case "none":
+        case "techno":
 
-default:
+            technoAnimation(t);
 
-break;
+        break;
+
+
+
+        case "ceremony":
+
+            ceremonyAnimation(t);
+
+        break;
+
+
+
+    }
+
+
+
+
+    // IMPORTANT
+    // skeleton drives mesh
+
+    updateMesh();
+
 
 
 }
-
-
-
-// KEEP IMAGE MESH CONNECTED
-
-updateMesh();
-
-
-
-}
-
-
 
 
 
@@ -154,59 +235,56 @@ updateMesh();
 
 // ==================================================
 // BREATHING
-// organic body movement
 // ==================================================
 
 function breathingAnimation(t){
 
 
 
-let breath =
-Math.sin(t*1.5)
-*
-8;
+    let breath =
+    Math.sin(t*1.5)
+    *
+    8;
 
 
 
-let shoulder =
-Math.sin(t*1.5)
-*
-3;
+    let shoulder =
+    Math.sin(t*1.5)
+    *
+    3;
 
 
 
-if(joints.neck){
+    if(joints.neck){
 
-joints.neck.y =
-basePose.neck.y -
-breath;
+        joints.neck.y =
+        basePose.neck.y -
+        breath;
+
+    }
+
+
+
+    if(joints.left_shoulder){
+
+        joints.left_shoulder.y =
+        basePose.left_shoulder.y -
+        shoulder;
+
+    }
+
+
+
+    if(joints.right_shoulder){
+
+        joints.right_shoulder.y =
+        basePose.right_shoulder.y -
+        shoulder;
+
+    }
+
 
 }
-
-
-
-if(joints.left_shoulder){
-
-joints.left_shoulder.y =
-basePose.left_shoulder.y -
-shoulder;
-
-}
-
-
-
-if(joints.right_shoulder){
-
-joints.right_shoulder.y =
-basePose.right_shoulder.y -
-shoulder;
-
-}
-
-
-
-}
-
 
 
 
@@ -217,76 +295,137 @@ shoulder;
 
 // ==================================================
 // WALKING
-// weight shift
+// RECORDED JSON MOTION
 // ==================================================
 
 function walkingAnimation(t){
 
 
 
-let step =
-Math.sin(t*3)
-*
-35;
+    if(recordedWalking){
 
 
 
-let body =
-Math.sin(t*3)
-*
-4;
+        let frame =
+        recordedWalking.frames[
+            Math.floor(walkingFrame)
+        ];
 
 
 
-if(joints.neck){
+        if(frame){
 
-joints.neck.x =
-basePose.neck.x +
-body;
+            // create neck from shoulders
 
-}
+            if(
+                frame.left_shoulder &&
+                frame.right_shoulder
+            ){
 
+                frame.neck = [
 
-
-
-if(joints.left_knee){
-
-joints.left_knee.x =
-basePose.left_knee.x +
-step;
-
-}
+                    (
+                        frame.left_shoulder[0] +
+                        frame.right_shoulder[0]
+                    ) / 2,
 
 
+                    (
+                        frame.left_shoulder[1] +
+                        frame.right_shoulder[1]
+                    ) / 2 - 0.08
 
-if(joints.right_knee){
+                ];
 
-joints.right_knee.x =
-basePose.right_knee.x -
-step;
+            }
 
-}
-
-
-
-if(joints.left_ankle){
-
-joints.left_ankle.x =
-basePose.left_ankle.x -
-step;
-
-}
+            for(
+                let jointName in frame
+            ){
 
 
 
-if(joints.right_ankle){
+                if(
+                    joints[jointName]
+                ){
 
-joints.right_ankle.x =
-basePose.right_ankle.x +
-step;
 
-}
+                    joints[jointName].x =
+                    frame[jointName][0]
+                    *
+                    canvas.width;
 
+
+
+                    joints[jointName].y =
+                    (1-frame[jointName][1])
+                    *
+                    canvas.height;
+
+
+                }
+
+
+            }
+
+
+        }
+
+
+
+
+        walkingFrame +=
+        animationState.speed;
+
+
+
+        if(
+            walkingFrame >=
+            recordedWalking.frames.length
+        ){
+
+            walkingFrame = 0;
+
+        }
+
+
+
+        return;
+
+
+    }
+
+
+
+
+
+    // fallback procedural walk
+
+
+    let step =
+    Math.sin(t*3)
+    *
+    35;
+
+
+
+    if(joints.left_knee){
+
+        joints.left_knee.x =
+        basePose.left_knee.x +
+        step;
+
+    }
+
+
+
+    if(joints.right_knee){
+
+        joints.right_knee.x =
+        basePose.right_knee.x -
+        step;
+
+    }
 
 
 }
@@ -301,75 +440,63 @@ step;
 
 // ==================================================
 // HIP HOP
-// groove movement
 // ==================================================
 
 function hipHopAnimation(t){
 
 
 
-let bounce =
-Math.sin(t*6)
-*
-15;
+    let bounce =
+    Math.sin(t*6)
+    *
+    15;
 
 
 
-let arm =
-Math.sin(t*3)
-*
-30;
+    let arm =
+    Math.sin(t*3)
+    *
+    30;
 
 
 
+    if(joints.left_shoulder){
 
-if(joints.neck){
+        joints.left_shoulder.y =
+        basePose.left_shoulder.y +
+        bounce;
 
-joints.neck.y =
-basePose.neck.y +
-bounce*0.3;
-
-}
-
-
-
-if(joints.left_shoulder){
-
-joints.left_shoulder.y =
-basePose.left_shoulder.y +
-bounce;
-
-}
+    }
 
 
 
-if(joints.right_shoulder){
+    if(joints.right_shoulder){
 
-joints.right_shoulder.y =
-basePose.right_shoulder.y +
-bounce;
+        joints.right_shoulder.y =
+        basePose.right_shoulder.y +
+        bounce;
 
-}
-
-
-
-if(joints.left_elbow){
-
-joints.left_elbow.x =
-basePose.left_elbow.x -
-arm;
-
-}
+    }
 
 
 
-if(joints.right_elbow){
+    if(joints.left_elbow){
 
-joints.right_elbow.x =
-basePose.right_elbow.x +
-arm;
+        joints.left_elbow.x =
+        basePose.left_elbow.x -
+        arm;
 
-}
+    }
+
+
+
+    if(joints.right_elbow){
+
+        joints.right_elbow.x =
+        basePose.right_elbow.x +
+        arm;
+
+    }
 
 
 
@@ -385,69 +512,40 @@ arm;
 
 // ==================================================
 // TECHNO
-// mechanical pulse
 // ==================================================
 
 function technoAnimation(t){
 
 
 
-let pulse =
-Math.sin(t*8)
-*
-20;
+    let pulse =
+    Math.sin(t*8)
+    *
+    20;
 
 
 
-let twist =
-Math.sin(t*4)
-*
-30;
+    if(joints.left_wrist){
+
+        joints.left_wrist.y =
+        basePose.left_wrist.y +
+        pulse;
+
+    }
 
 
 
-if(joints.left_wrist){
+    if(joints.right_wrist){
 
-joints.left_wrist.y =
-basePose.left_wrist.y +
-twist;
+        joints.right_wrist.y =
+        basePose.right_wrist.y -
+        pulse;
 
-}
-
-
-
-if(joints.right_wrist){
-
-joints.right_wrist.y =
-basePose.right_wrist.y -
-twist;
-
-}
-
-
-
-if(joints.left_knee){
-
-joints.left_knee.x =
-basePose.left_knee.x +
-pulse;
-
-}
-
-
-
-if(joints.right_knee){
-
-joints.right_knee.x =
-basePose.right_knee.x -
-pulse;
-
-}
+    }
 
 
 
 }
-
 
 
 
@@ -458,59 +556,40 @@ pulse;
 
 // ==================================================
 // CEREMONY
-// slow calligraphy movement
 // ==================================================
 
 function ceremonyAnimation(t){
 
 
 
-let hand =
-Math.sin(t*0.8)
-*
-40;
+    let hand =
+    Math.sin(t*0.8)
+    *
+    40;
 
 
 
-let body =
-Math.sin(t*0.5)
-*
-15;
+    if(joints.left_wrist){
+
+        joints.left_wrist.y =
+        basePose.left_wrist.y +
+        hand;
+
+    }
 
 
 
-if(joints.left_wrist){
+    if(joints.right_wrist){
 
-joints.left_wrist.y =
-basePose.left_wrist.y +
-hand;
+        joints.right_wrist.y =
+        basePose.right_wrist.y -
+        hand;
 
-}
-
-
-
-if(joints.right_wrist){
-
-joints.right_wrist.y =
-basePose.right_wrist.y -
-hand;
-
-}
-
-
-
-if(joints.neck){
-
-joints.neck.x =
-basePose.neck.x +
-body;
-
-}
+    }
 
 
 
 }
-
 
 
 
@@ -538,26 +617,25 @@ document.getElementById(
 
 
 
-
 if(playAnimationButton){
 
 
-playAnimationButton.onclick=function(){
+    playAnimationButton.onclick =
+    function(){
 
 
-if(animationSelect){
+        if(animationSelect){
 
 
-selectAnimation(
-animationSelect.value
-);
+            selectAnimation(
+                animationSelect.value
+            );
 
 
-}
+        }
 
 
-
-};
+    };
 
 
 }
