@@ -2332,9 +2332,7 @@ createDefaultPose();
 function loop(){
 
 
-    console.log(
-        "ENGINE LOOP"
-    );
+
 
 
     updateAnimations();
