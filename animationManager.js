@@ -13,7 +13,7 @@
 class AnimationManager {
 
 
-    constructor(){
+    updateJSONtructor(){
 
 
         this.currentName = "none";
@@ -29,6 +29,9 @@ class AnimationManager {
 
 
         this.playing = false;
+
+        this.frameStep = 3;
+        this.updateCounter = 0;
 
 
 
@@ -252,104 +255,74 @@ class AnimationManager {
 
 
 
-    // ==================================================
-    // JSON PLAYBACK
-    // ==================================================
+   // ==================================================
+// JSON PLAYBACK
+// ==================================================
 
-    updateJSON(){
+updateJSON(){
 
 
+    if(
+        !this.jsonData ||
+        !this.jsonData.frames
+    ){
 
-        if(
-            !this.jsonData ||
-            !this.jsonData.frames
-        )
+        console.warn(
+            "No JSON data"
+        );
 
         return;
-
-
-
-
-
-        let frames =
-        this.jsonData.frames;
-
-
-
-        let index =
-        Math.floor(
-            this.frame
-        );
-
-
-
-
-        if(index >= frames.length){
-
-
-            this.frame = 0;
-
-
-            index = 0;
-
-
-        }
-
-
-
-
-        let frame =
-        frames[index];
-
-
-
-
-
-        if(this.debug){
-
-
-            if(this.debugCounter % 120 === 0){
-
-
-                console.log(
-
-                    "JSON FRAME",
-
-                    {
-                        index:index,
-                        nose:frame.nose,
-                        left_knee:frame.left_knee
-                    }
-
-                );
-
-
-            }
-
-
-        }
-
-
-
-
-
-        this.applyFrame(
-            frame
-        );
-
-
-
-
-        this.frame +=
-        this.speed;
-
-
 
     }
 
 
 
+    let frames =
+    this.jsonData.frames;
 
+
+
+    let index =
+    Math.floor(
+        this.frame
+    );
+
+
+
+    if(index >= frames.length){
+
+        this.frame = 0;
+
+        index = 0;
+
+    }
+
+
+
+    let frame =
+    frames[index];
+
+
+
+    console.log(
+        "PLAYING JSON FRAME",
+        index
+    );
+
+
+
+    this.applyFrame(
+        frame
+    );
+
+
+
+    this.frame +=
+    this.speed;
+
+
+
+}
 
 
 
@@ -556,3 +529,5 @@ class AnimationManager {
 let animationManager =
 
 new AnimationManager();
+
+

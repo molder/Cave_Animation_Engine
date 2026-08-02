@@ -57,7 +57,7 @@ async function loadWalkingJSON(){
 
 
 
-        console.log(
+        updateJSONole.log(
             "Walking JSON loaded:",
             recordedWalking.frames.length,
             "frames"
@@ -112,7 +112,7 @@ function selectAnimation(name){
 
 
 
-    console.log(
+    updateJSONole.log(
         "Animation:",
         name
     );
@@ -149,10 +149,24 @@ function stopAnimation(){
 
 function updateAnimations(){
 
-    console.log("UPDATE ANIMATIONS LOOP");
+
+    console.log(
+        "UPDATE ANIMATIONS LOOP"
+    );
+
+
+
+    // Time in seconds for procedural animations
+
+    animationState.time +=
+    0.016 *
+    animationState.speed;
+
+
 
     let t =
-    performance.now();
+    animationState.time;
+
 
 
 
@@ -714,10 +728,7 @@ if(speedSlider){
         }
 
 
-        console.log(
-            "Speed:",
-            value
-        );
+      ;
 
 
     };
