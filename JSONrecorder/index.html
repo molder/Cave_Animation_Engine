@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Cave JSON Motion Recorder</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body>
+
+
+<div id="panel">
+
+<h3>
+CAVE MOTION RECORDER
+</h3>
+
+
+<label>
+OSC Port
+</label>
+
+<input id="port" value="7771">
+
+
+<br>
+
+
+<label>
+Animation Name
+</label>
+
+<input id="name" value="take_001">
+
+
+<br><br>
+
+
+<button id="connect">
+CONNECT OSC
+</button>
+
+
+<button id="record">
+REC
+</button>
+
+
+<button id="stop">
+STOP
+</button>
+
+
+<button id="save">
+SAVE JSON
+</button>
+
+
+<hr>
+
+
+<div id="status">
+offline
+</div>
+
+
+<div id="counter">
+Frames: 0
+</div>
+
+
+<canvas 
+id="canvas"
+width="500"
+height="500">
+</canvas>
+
+
+</div>
+
+
+
+<script src="recorder.js"></script>
+
+
+</body>
+
+</html>

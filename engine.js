@@ -15,22 +15,20 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 
+// =================================
+// GLOBAL IMAGE
+// =================================
+
+
 // ==================================================
 // UI REFERENCES
 // ==================================================
-
-const imageLoader =
-document.getElementById("imageLoader");
-
-const poseLoader =
-document.getElementById("poseLoader");
 
 const newPoseButton =
 document.getElementById("newPose");
 
 const savePoseButton =
 document.getElementById("savePose");
-
 const createMeshButton =
 document.getElementById("createMesh");
 
@@ -43,6 +41,7 @@ document.getElementById("meshSlider");
 const animationLoader =
 document.getElementById("animationLoader");
 
+const POSE_PATH = "./poses/";
 
 // ==================================================
 // ENGINE STATE
@@ -76,6 +75,8 @@ let walking = false;
 let animationTime = 0;
 
 
+const GRID = 20;
+
 const MESH_SIZE = 40;
 
 
@@ -106,44 +107,6 @@ const BONES = [
 ["right_knee","right_ankle"]
 
 ];
-
-
-
-// ==================================================
-// IMAGE LOADING
-// ==================================================
-
-if(imageLoader){
-
-imageLoader.onchange=function(e){
-
-let file=e.target.files[0];
-
-if(!file)
-return;
-
-
-let img=new Image();
-
-
-img.onload=function(){
-
-image=img;
-
-draw();
-
-};
-
-
-img.src=
-URL.createObjectURL(file);
-
-
-};
-
-
-}
-
 
 
 
@@ -255,117 +218,348 @@ createDefaultPose();
 
 
 // ==================================================
-// LOAD POSE
+// SAVE POSE
+// writes directly into /poses/ via the File System
+// Access API (Chrome/Edge only, page must be served
+// over http:// or https://, not opened as file://)
+// and keeps poses/manifest.json in sync automatically.
+// Falls back to the old download-based save if the
+// browser doesn't support it.
 // ==================================================
 
-if(poseLoader){
-
-poseLoader.onchange=function(e){
-
-
-let reader =
-new FileReader();
+const POSE_DIR_DB = "cave_engine_handles";
+const POSE_DIR_STORE = "handles";
+const POSE_DIR_KEY = "posesFolder";
 
 
+function openHandleDB(){
 
-reader.onload=function(){
+    return new Promise(function(resolve, reject){
 
+        let req = indexedDB.open(POSE_DIR_DB, 1);
 
-let data =
-JSON.parse(reader.result);
+        req.onupgradeneeded = function(){
+            req.result.createObjectStore(POSE_DIR_STORE);
+        };
 
+        req.onsuccess = function(){ resolve(req.result); };
 
+        req.onerror = function(){ reject(req.error); };
 
-joints=data.joints;
-
-
-
-basePose =
-JSON.parse(
-JSON.stringify(joints)
-);
-
-
-
-mesh=[];
-
-meshReady=false;
-
-
-draw();
-
-
-};
-
-
-
-reader.readAsText(
-e.target.files[0]
-);
-
-
-};
+    });
 
 }
 
 
+async function getStoredPosesHandle(){
 
-// ==================================================
-// SAVE POSE
-// ==================================================
+    try{
+
+        let db = await openHandleDB();
+
+        return await new Promise(function(resolve){
+
+            let tx = db.transaction(POSE_DIR_STORE, "readonly");
+
+            let req = tx.objectStore(POSE_DIR_STORE).get(POSE_DIR_KEY);
+
+            req.onsuccess = function(){ resolve(req.result || null); };
+
+            req.onerror = function(){ resolve(null); };
+
+        });
+
+    }
+
+    catch(error){
+
+        return null;
+
+    }
+
+}
+
+
+let updateLibraryButton =
+document.getElementById(
+    "updateLibraryButton"
+);
+
+
+if(updateLibraryButton){
+
+    updateLibraryButton.onclick =
+    updateLibrary;
+
+}
+
+
+// #temorary
+
+
+
+async function clearPosesHandle(){
+
+    let db = await openHandleDB();
+
+    let tx = db.transaction(
+        POSE_DIR_STORE,
+        "readwrite"
+    );
+
+    tx.objectStore(POSE_DIR_STORE)
+      .delete(POSE_DIR_KEY);
+
+    console.log("Pose folder handle cleared");
+
+}
+
+async function updateLibrary(){
+
+    console.log("Updating library...");
+
+
+    await updateImageManifest();
+
+    await updatePoseManifest();
+
+    await updateStyleManifest();
+
+
+    await loadImageManifest();
+
+    await loadPoseManifest();
+
+    await loadAnimationManifest();
+
+
+    console.log("Library updated");
+
+}
+
+async function getPosesDirectoryHandle(){
+
+    if(!window.showDirectoryPicker){
+
+        console.warn(
+            "File System Access API not supported in this browser"
+        );
+
+        return null;
+
+    }
+
+    let handle = await getStoredPosesHandle();
+
+    if(handle && handle.name === "poses"){
+
+        let permission = await handle.requestPermission({mode:"readwrite"});
+
+        if(permission === "granted"){
+
+            return handle;
+
+        }
+
+    }
+
+    // no valid stored handle (missing, wrong folder, or
+    // permission revoked) - ask again
+
+    while(true){
+
+        handle = await window.showDirectoryPicker({
+
+            id: "cave-poses-folder",
+
+            startIn: "documents"
+
+        });
+
+        if(handle.name === "poses"){
+
+            break;
+
+        }
+
+        let tryAgain = confirm(
+            "You picked \"" + handle.name + "\", not \"poses\".\n\n" +
+            "Navigate into Cave_Animation_Engine_/poses/ and select THAT folder.\n\n" +
+            "Click OK to pick again, or Cancel to abort saving."
+        );
+
+        if(!tryAgain){
+
+            return null;
+
+        }
+
+    }
+
+    await storePosesHandle(handle);
+
+    return handle;
+
+}
+
+
+async function updatePosesManifest(dirHandle, name){
+
+    try{
+
+        let manifestHandle =
+        await dirHandle.getFileHandle("manifest.json", {create:true});
+
+        let file = await manifestHandle.getFile();
+
+        let text = await file.text();
+
+        let data;
+
+        try{ data = JSON.parse(text); }
+        catch(e){ data = {poses:[]}; }
+
+        if(!data.poses) data.poses = [];
+
+        if(!data.poses.includes(name)){
+            data.poses.push(name);
+        }
+
+        let writable = await manifestHandle.createWritable();
+
+        await writable.write(JSON.stringify(data, null, 2));
+
+        await writable.close();
+
+        return data.poses;
+
+    }
+
+    catch(error){
+
+        console.error(
+            "Could not update poses/manifest.json:",
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
 
 if(savePoseButton){
 
-savePoseButton.onclick=function(){
+savePoseButton.onclick=async function(){
 
 
-let data={
+    let name =
+    prompt("Save pose as:", "pose");
 
-version:"V12",
 
-joints:joints
+    if(!name)
+    return;
+
+
+    let data={
+
+    version:"V12",
+
+    joints:joints
+
+    };
+
+
+    let dirHandle =
+    await getPosesDirectoryHandle();
+
+
+    // fallback: browsers without File System Access API
+    // get the old download-to-Downloads-folder behaviour
+
+    if(!dirHandle){
+
+        let blob =
+        new Blob(
+            [JSON.stringify(data, null, 2)],
+            {type:"application/json"}
+        );
+
+        let a =
+        document.createElement("a");
+
+        a.href = URL.createObjectURL(blob);
+
+        a.download = name + ".json";
+
+        a.click();
+
+        return;
+
+    }
+
+
+    try{
+
+        let fileHandle =
+        await dirHandle.getFileHandle(name + ".json", {create:true});
+
+        let writable =
+        await fileHandle.createWritable();
+
+        await writable.write(JSON.stringify(data, null, 2));
+
+        await writable.close();
+        console.log(
+            "MANIFEST UPDATED:",
+            dirHandle.name,
+            data
+        );
+
+        await updatePosesManifest(dirHandle, name);
+
+        console.log(
+            "Pose saved to poses/" + name + ".json"
+        );
+
+        alert(
+            "Pose saved:\n" +
+            dirHandle.name + "/" + name + ".json"
+        );
+
+        // refresh the dropdown immediately, no reload needed
+
+        if(
+            typeof poseSelect !== "undefined" &&
+            poseSelect
+        ){
+
+            while(poseSelect.options.length > 1){
+                poseSelect.remove(1);
+            }
+
+        }
+
+        if(typeof loadPoseManifest === "function"){
+
+            loadPoseManifest();
+
+        }
+
+    }
+
+    catch(error){
+
+        console.error(
+            "Pose saving failed:",
+            error
+        );
+
+    }
+
 
 };
-
-
-
-let blob =
-new Blob(
-
-[
-JSON.stringify(
-data,
-null,
-2
-)
-],
-
-{
-type:"application/json"
-}
-
-);
-
-
-
-let a =
-document.createElement("a");
-
-
-a.href =
-URL.createObjectURL(blob);
-
-
-a.download =
-"pose.json";
-
-
-a.click();
-
-
-
-};
-
 
 }
 
@@ -1250,78 +1444,62 @@ canvas.onmousedown=function(e){
     
     // ==================================================
     // UPDATE MESH FROM POSE
+    // Rotates + scales each mesh region together with its
+    // bone (pivoting at the bone's start joint), instead of
+    // just sliding it by the average endpoint displacement.
+    // This is what makes limbs actually bend instead of
+    // wobbling in place.
     // ==================================================
-    
+
     function updateMesh(){
-    
-    
-    
-    if(!meshReady)
-    return;
-    
-    
-    
-    for(let p of mesh){
-    
-    
-    
-    if(!p.bone)
-    continue;
-    
-    
-    
-    let a =
-    joints[p.bone[0]];
-    
-    
-    let b =
-    joints[p.bone[1]];
-    
-    
-    
-    let ra =
-    basePose[p.bone[0]];
-    
-    
-    let rb =
-    basePose[p.bone[1]];
-    
-    
-    
-    if(!ra || !rb)
-    continue;
-    
-    
-    
-    let dx =
-    (
-    (a.x-ra.x)+
-    (b.x-rb.x)
-    )/2;
-    
-    
-    
-    let dy =
-    (
-    (a.y-ra.y)+
-    (b.y-rb.y)
-    )/2;
-    
-    
-    
-    p.x =
-    p.originalX+dx;
-    
-    
-    p.y =
-    p.originalY+dy;
-    
-    
-    
-    }
-    
-    
-    
+
+
+        if(!meshReady)
+        return;
+
+
+        for(let p of mesh){
+
+
+            if(!p.bone)
+            continue;
+
+
+            let a = joints[p.bone[0]];
+            let b = joints[p.bone[1]];
+
+            let ra = basePose[p.bone[0]];
+            let rb = basePose[p.bone[1]];
+
+            if(!ra || !rb)
+            continue;
+
+
+            let restDx = rb.x - ra.x;
+            let restDy = rb.y - ra.y;
+            let restLen = Math.hypot(restDx, restDy);
+            let restAngle = Math.atan2(restDy, restDx);
+
+            let curDx = b.x - a.x;
+            let curDy = b.y - a.y;
+            let curLen = Math.hypot(curDx, curDy);
+            let curAngle = Math.atan2(curDy, curDx);
+
+            let deltaAngle = curAngle - restAngle;
+            let scale = restLen > 0 ? (curLen / restLen) : 1;
+
+            let localX = p.originalX - ra.x;
+            let localY = p.originalY - ra.y;
+
+            let cos = Math.cos(deltaAngle);
+            let sin = Math.sin(deltaAngle);
+
+            p.x = a.x + (localX*cos - localY*sin) * scale;
+            p.y = a.y + (localX*sin + localY*cos) * scale;
+
+        }
+
+
     }
 
     //Part 3/4
@@ -1360,7 +1538,8 @@ function drawImage(){
     
     );
     
-    
+ 
+
     return;
     
     }
@@ -1851,69 +2030,82 @@ function drawImage(){
 // MAIN DRAW
 // =======================
 
+// =======================
+// MAIN DRAW
+// =======================
+
 function draw(){
 
 
     ctx.clearRect(
-    
-    0,
-    
-    0,
-    
-    canvas.width,
-    
-    canvas.height
-    
+        0,
+        0,
+        canvas.width,
+        canvas.height
     );
-    
-    
-    
-    
+
+
+
+    // =======================
     // REAL OUTPUT
-    
+    // =======================
+
     drawImage();
-    
-    
-    
-    
-    
+
+
+
+    // =======================
     // DEBUG MESH ONLY
-    
+    // =======================
+
     if(meshOpacity > 0){
-    
-    ctx.globalAlpha =
-    meshOpacity;
-    
-    drawMesh();
-    
-    ctx.globalAlpha = 1;
-    
+
+        ctx.globalAlpha =
+        meshOpacity;
+
+        drawMesh();
+
+        ctx.globalAlpha = 1;
+
     }
-    
-    
-    
-    
-    
+
+
+
+    // =======================
     // DEBUG SKELETON ONLY
-    
+    // =======================
+
     if(skeletonOpacity > 0){
-    
-    ctx.globalAlpha =
-    skeletonOpacity;
-    
-    drawSkeleton();
-    
-    ctx.globalAlpha = 1;
-    
+
+        ctx.globalAlpha =
+        skeletonOpacity;
+
+        drawSkeleton();
+
+        ctx.globalAlpha = 1;
+
     }
-    
-    
-    
+
+
+
+    // =======================
+    // SEND FINAL CANVAS FRAME
+    // TO CAVE ANIMATION BRIDGE
+    // =======================
+
+    if(
+        window.CaveAnimationBridge &&
+        typeof window.CaveAnimationBridge.sendFrame === "function"
+    ){
+
+        window.CaveAnimationBridge.sendFrame(canvas);
+
     }
-    
-    
-    
-    
+
+
+} 
+
+
     
     
     
@@ -2218,7 +2410,47 @@ draw();
 
 
 
+// =================================
+// UI SHOW / HIDE
+// =================================
 
+const menu = document.getElementById("menu");
+
+const hideButton = document.getElementById("hideUI");
+
+
+
+
+function toggleUI(){
+
+    if (!menu) return;
+
+    menu.classList.toggle("hidden");
+
+}
+
+
+
+hideButton.onclick = toggleUI;
+
+
+
+// Keyboard shortcut
+
+window.addEventListener(
+    "keydown",
+    function(e){
+
+
+        if(e.key === "h"){
+
+            toggleUI();
+
+        }
+
+
+    }
+);
 
 
 
@@ -2328,5 +2560,27 @@ loop
 
 createDefaultPose();
 
+
+function loop(){
+
+
+
+
+
+    updateAnimations();
+
+
+    draw();
+
+
+    requestAnimationFrame(
+        loop
+    );
+
+
+}
+
+
+// START ENGINE
 
 loop();

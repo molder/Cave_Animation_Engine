@@ -30,22 +30,21 @@ Cave Animation Engine V11
 
 Image:
 
-<input 
-id="imageLoader"
-type="file"
-accept="image/*">
-
+<select id="imageSelect">
+<option value="">
+Select saved image
+</option>
+</select>
 
 <br>
 
-
 Pose:
 
-<input 
-id="poseLoader"
-type="file"
-accept=".json">
-
+<select id="poseSelect">
+<option value="">
+Select saved pose
+</option>
+</select>
 
 <button id="newPose">
 New Pose
@@ -57,12 +56,18 @@ Save Pose
 </button>
 
 
-<br>
 
+<button id="updateLibraryButton">
+    UPDATE LIBRARY
+    </button>
+    <br>
 
 <button id="createMesh">
 Create Mesh
 </button>
+
+
+
 
 
 <br>
@@ -100,10 +105,41 @@ Ceremony
 </select>
 
 
-<button id="playAnimation">
-Play
-</button>
+<!-- Animation Controls -->
 
+<div class="animation-controls">
+
+
+    <label>
+    Intensity
+    <span id="intensityValue">50%</span>
+    </label>
+    
+    <input
+    id="animationIntensity"
+    type="range"
+    min="0"
+    max="100"
+    value="50"
+    >
+    
+    
+    
+    <label>
+    Speed
+    <span id="speedValue">100%</span>
+    </label>
+    
+    <input
+    id="animationSpeed"
+    type="range"
+    min="10"
+    max="200"
+    value="100"
+    >
+    
+    
+    </div>
 
 <br>
 
@@ -135,19 +171,26 @@ value="100">
 
 
 </div>
+<!-- SINGLE UI TOGGLE -->
+<button id="hideUI">
+    Hide UI
+    </button>
 
+    
 <div id="spaceship"></div>
 
-<canvas 
-id="canvas"
-width="600"
-height="600">
-</canvas>
+<canvas id="canvas" width="600" height="600"></canvas>
 
+<script src="animationManager.js"></script>
+
+<script src="animation.js"></script>
+
+<script src="bridge.js"></script>
+<script src="engine.js"></script>
+
+<script src="presetLibrary.js"></script>
 
 <script src="menu_fx.js"></script>
-<script src="animation.js"></script>
-<script src="engine.js"></script>
 
 
 </body>

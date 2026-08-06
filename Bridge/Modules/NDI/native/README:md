@@ -1,0 +1,42 @@
+# CaveNDI Native Module
+
+Native bridge between Node.js and the NDI SDK.
+
+Exports:
+
+- createSender()
+- sendFrame()
+- destroySender()
+
+Current state:
+
+Skeleton only.
+
+Next:
+
+Connect NDIlib_send_create()
+and NDIlib_send_send_video_v2()
+
+# Cave Animation Bridge
+
+## Current Status
+
+### Working
+
+- BridgeServer
+- WebSocket communication
+- Browser connection
+- Module system
+- NDI module architecture
+
+## NDI Development Status
+
+Current phase:
+
+Testing on macOS.
+
+Goal:
+
+Receive the Cave Animation Engine output inside TouchDesigner.
+
+Current test path:
