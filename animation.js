@@ -581,35 +581,27 @@ document.getElementById(
 
 
 
-let playAnimationButton =
-document.getElementById(
-"playAnimation"
-);
+// load immediately on selection, same as
+// imageSelect / poseSelect - no separate button needed
+
+if(animationSelect){
 
 
-
-if(playAnimationButton){
-
-
-    playAnimationButton.onclick =
+    animationSelect.onchange =
     function(){
 
 
-        if(animationSelect){
-
-
-            animationManager.load(
-                animationSelect.value
-            );
-
-
-        }
+        animationManager.load(
+            animationSelect.value
+        );
 
 
     };
 
 
 }
+
+
 // ==================================================
 // ANIMATION SLIDERS
 // ==================================================

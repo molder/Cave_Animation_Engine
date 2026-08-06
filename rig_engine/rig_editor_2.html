@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cave Rig — pose &amp; loop editor</title>
+<style>
+  :root{
+    --stone:#211c17;
+    --stone-panel:#2a221b;
+    --stone-line:#4a3b2c;
+    --ochre:#c17f3e;
+    --ochre-deep:#8a4a1f;
+    --redochre:#8f3520;
+    --chalk:#e9ddc4;
+    --chalk-dim:#a89877;
+    --charcoal:#171310;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--stone);color:var(--chalk);font-family:var(--sans);}
+  body{
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(193,127,62,0.06), transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(0,0,0,0.4), transparent 55%);
+  }
+  header{
+    padding:22px 28px 14px;
+    border-bottom:1px solid var(--stone-line);
+  }
+  h1{
+    font-family:var(--serif);
+    font-weight:500;
+    font-size:22px;
+    letter-spacing:0.3px;
+    margin:0 0 4px;
+    color:var(--chalk);
+  }
+  h1 span{color:var(--ochre);}
+  header p{
+    margin:0;
+    font-size:12.5px;
+    color:var(--chalk-dim);
+    letter-spacing:0.2px;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns:minmax(360px,1fr) 380px;
+    gap:0;
+    height:calc(100% - 78px);
+  }
+  .stage{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    overflow:auto;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+  }
+  .canvas-wrap{
+    position:relative;
+    box-shadow:0 0 0 1px var(--stone-line), 0 30px 60px -20px rgba(0,0,0,0.6);
+    background:#0d0b09;
+    max-width:100%;
+  }
+  svg#rig{
+    display:block;
+    max-width:100%;
+    height:auto;
+    touch-action:none;
+  }
+  .joint-handle{
+    cursor:grab;
+    fill:var(--ochre);
+    stroke:var(--charcoal);
+    stroke-width:1.5;
+    transition:r 0.1s ease, fill 0.1s ease;
+  }
+  .joint-handle:hover{fill:#e0a355; r:9;}
+  .joint-handle.dragging{fill:var(--redochre); cursor:grabbing;}
+  .bone{
+    stroke:var(--charcoal);
+    stroke-width:6;
+    stroke-linecap:round;
+    fill:none;
+    opacity:0.92;
+  }
+  .bone.thin{stroke-width:4;}
+  .side{
+    display:flex;
+    flex-direction:column;
+    border-left:1px solid var(--stone-line);
+    background:var(--stone-panel);
+    overflow-y:auto;
+  }
+  .panel{
+    padding:16px 20px;
+    border-bottom:1px solid var(--stone-line);
+  }
+  .panel h2{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:1.6px;
+    color:var(--ochre);
+    margin:0 0 12px;
+    font-weight:600;
+  }
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .row label{flex:0 0 auto;font-size:12.5px;color:var(--chalk-dim);width:118px;}
+  .row input[type=range]{flex:1;accent-color:var(--ochre);}
+  .row .val{font-family:var(--mono);font-size:12px;color:var(--chalk);width:44px;text-align:right;}
+  button{
+    font-family:var(--sans);
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:0.2px;
+    background:var(--ochre-deep);
+    color:var(--chalk);
+    border:1px solid var(--ochre);
+    border-radius:3px;
+    padding:9px 14px;
+    cursor:pointer;
+    width:100%;
+    margin-bottom:8px;
+  }
+  button:hover{background:var(--ochre);color:var(--charcoal);}
+  button.secondary{background:transparent;color:var(--chalk-dim);border-color:var(--stone-line);}
+  button.secondary:hover{background:var(--stone-line);color:var(--chalk);}
+  button.play{background:var(--redochre);border-color:var(--redochre);}
+  button.play.on{background:#2e6b3e;border-color:#2e6b3e;}
+  input[type=file]{
+    font-size:11.5px;color:var(--chalk-dim);width:100%;
+  }
+  textarea{
+    width:100%;height:150px;
+    background:var(--charcoal);
+    color:#b8e6a0;
+    font-family:var(--mono);
+    font-size:10.5px;
+    line-height:1.5;
+    border:1px solid var(--stone-line);
+    border-radius:3px;
+    padding:10px;
+    resize:vertical;
+    margin-bottom:6px;
+  }
+  .hint{font-size:11px;color:var(--chalk-dim);line-height:1.5;margin:0 0 10px;}
+  .copybtn{font-size:11px;padding:6px 10px;width:auto;display:inline-block;}
+  .badge{
+    display:inline-block;font-family:var(--mono);font-size:10px;
+    background:var(--stone-line);color:var(--chalk-dim);
+    padding:2px 6px;border-radius:2px;margin-left:6px;
+  }
+  ::-webkit-scrollbar{width:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--stone-line);border-radius:5px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Cave Rig <span>/ pose &amp; loop editor</span></h1>
+  <p>Load the painting → drag the 17 joints onto the figure → hit Play to preview the 5s dance loop → export for TouchDesigner.</p>
+</header>
+
+<div class="layout">
+  <div class="stage">
+    <div class="canvas-wrap">
+      <svg id="rig" width="400" height="600" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
+        <image id="bgImage" x="0" y="0" width="400" height="600" preserveAspectRatio="xMidYMid slice" opacity="0.9"></image>
+        <g id="rigRoot"></g>
+        <g id="handles"></g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="panel">
+      <h2>01 — Image</h2>
+      <input type="file" id="fileInput" accept="image/*">
+      <p class="hint">PNG/JPG of the cave painting. It becomes the canvas background; joints default to a generic standing pose — drag each onto the actual figure.</p>
+    </div>
+
+    <div class="panel">
+      <h2>02 — Loop</h2>
+      <div class="row">
+        <label>Duration (s)</label>
+        <input type="range" id="durSlider" min="2" max="10" step="0.5" value="5">
+        <span class="val" id="durVal">5.0</span>
+      </div>
+      <div class="row">
+        <label>Amplitude</label>
+        <input type="range" id="ampSlider" min="0.3" max="1.8" step="0.05" value="1">
+        <span class="val" id="ampVal">1.00</span>
+      </div>
+      <button class="play" id="playBtn">▶ Play loop</button>
+      <p class="hint">Edit mode freezes the rig at your dragged pose (bind pose). Play applies the procedural sway on top of it — always a seamless loop of exactly the duration above.</p>
+    </div>
+
+    <div class="panel">
+      <h2>03 — Export for TouchDesigner</h2>
+      <p class="hint"><b>Quick path</b> — paste directly into a Text DAT, point <span class="badge">webrender1.par.dat</span> at it, done.</p>
+      <button id="expHtmlBtn">Copy standalone HTML (with image baked in)</button>
+      <p class="hint"><b>TD-native path</b> — regenerates from your live <span class="badge">in1</span> TOP inside TD, joints editable in the script. Use this if the painting may change or you want it wired to the real network.</p>
+      <button id="expPyBtn">Copy TD Python generator</button>
+      <p class="hint">Raw joint table (COCO-17, matches your <span class="badge">fj_*</span> naming), v already flipped to TOP (v-up) convention:</p>
+      <button id="expTableBtn" class="secondary">Copy joint table (TSV)</button>
+      <textarea id="outArea" readonly placeholder="Exported text appears here…"></textarea>
+      <button class="secondary copybtn" id="copyAreaBtn">Copy shown text</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- rig definition ---------- */
+// same joint names as /project1/TDYolo/.../joint_select_ui (fj_*), minus the fj_ prefix
+const DEFAULTS = {
+  nose:          [0.500, 0.100],
+  left_eye:      [0.470, 0.090],
+  right_eye:     [0.530, 0.090],
+  left_ear:      [0.440, 0.100],
+  right_ear:     [0.560, 0.100],
+  left_shoulder: [0.400, 0.220],
+  right_shoulder:[0.600, 0.220],
+  left_elbow:    [0.340, 0.350],
+  right_elbow:   [0.660, 0.350],
+  left_wrist:    [0.300, 0.480],
+  right_wrist:   [0.700, 0.480],
+  left_hip:      [0.440, 0.520],
+  right_hip:     [0.560, 0.520],
+  left_knee:     [0.420, 0.720],
+  right_knee:    [0.580, 0.720],
+  left_ankle:    [0.400, 0.920],
+  right_ankle:   [0.600, 0.920],
+};
+const FACE = ['left_eye','right_eye','left_ear','right_ear'];
+
+let W = 400, H = 600;
+let joints = {};
+for (const k in DEFAULTS) joints[k] = [DEFAULTS[k][0]*W, DEFAULTS[k][1]*H];
+
+const svg = document.getElementById('rig');
+const bg  = document.getElementById('bgImage');
+const rigRoot = document.getElementById('rigRoot');
+const handles = document.getElementById('handles');
+
+let styleTag = document.createElement('style');
+document.head.appendChild(styleTag);
+
+/* ---------- image loading ---------- */
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      W = img.naturalWidth; H = img.naturalHeight;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.setAttribute('width', W);
+      svg.setAttribute('height', H);
+      bg.setAttribute('width', W); bg.setAttribute('height', H);
+      bg.setAttribute('href', ev.target.result);
+      // rescale joints proportionally into new image dimensions
+      for(const k in DEFAULTS){ joints[k] = [DEFAULTS[k][0]*W, DEFAULTS[k][1]*H]; }
+      rebuild();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(f);
+});
+
+/* ---------- hierarchy ---------- */
+// [group class, pivotJoint or null(=derived), children: bone lines to draw here]
+function mid(a,b){ return [(joints[a][0]+joints[b][0])/2, (joints[a][1]+joints[b][1])/2]; }
+
+function rebuild(){
+  rigRoot.innerHTML = '';
+  handles.innerHTML = '';
+
+  const midHip = mid('left_hip','right_hip');
+  const neck   = mid('left_shoulder','right_shoulder');
+
+  function grp(cls, pivot, phase){
+    const g = document.createElementNS(svg.namespaceURI,'g');
+    g.setAttribute('class', 'part '+cls);
+    g.style.transformOrigin = `${pivot[0]}px ${pivot[1]}px`;
+    if(phase) g.dataset.phase = phase;
+    return g;
+  }
+  function line(g, p1, p2, thin){
+    const l = document.createElementNS(svg.namespaceURI,'line');
+    l.setAttribute('x1',p1[0]); l.setAttribute('y1',p1[1]);
+    l.setAttribute('x2',p2[0]); l.setAttribute('y2',p2[1]);
+    l.setAttribute('class','bone'+(thin?' thin':''));
+    g.appendChild(l);
+  }
+  function circ(g, p, r){
+    const c = document.createElementNS(svg.namespaceURI,'circle');
+    c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]); c.setAttribute('r',r||8);
+    c.setAttribute('class','bone');
+    c.setAttribute('fill', 'var(--charcoal)');
+    g.appendChild(c);
+  }
+
+  // hip bar (static, not animated)
+  line(rigRoot, joints.left_hip, joints.right_hip);
+
+  const root = grp('root', midHip, 0);
+  rigRoot.appendChild(root);
+
+  const spine = grp('spine', midHip, 0);
+  root.appendChild(spine);
+  line(spine, midHip, neck);
+
+  const head = grp('head', neck, 0);
+  spine.appendChild(head);
+  line(head, neck, joints.nose, true);
+  circ(head, joints.nose, 10);
+  FACE.forEach(k=> circ(head, joints[k], 3));
+
+  // arms
+  const Lup = grp('L_upperarm', joints.left_shoulder, 0.5);
+  spine.appendChild(Lup);
+  line(Lup, joints.left_shoulder, joints.left_elbow);
+  const Lfo = grp('L_forearm', joints.left_elbow, 0.5);
+  Lup.appendChild(Lfo);
+  line(Lfo, joints.left_elbow, joints.left_wrist);
+  circ(Lfo, joints.left_wrist, 6);
+
+  const Rup = grp('R_upperarm', joints.right_shoulder, 0);
+  spine.appendChild(Rup);
+  line(Rup, joints.right_shoulder, joints.right_elbow);
+  const Rfo = grp('R_forearm', joints.right_elbow, 0);
+  Rup.appendChild(Rfo);
+  line(Rfo, joints.right_elbow, joints.right_wrist);
+  circ(Rfo, joints.right_wrist, 6);
+
+  // legs
+  const Lth = grp('L_thigh', joints.left_hip, 0);
+  root.appendChild(Lth);
+  line(Lth, joints.left_hip, joints.left_knee);
+  const Lsh = grp('L_shin', joints.left_knee, 0);
+  Lth.appendChild(Lsh);
+  line(Lsh, joints.left_knee, joints.left_ankle);
+  circ(Lsh, joints.left_ankle, 6);
+
+  const Rth = grp('R_thigh', joints.right_hip, 0.5);
+  root.appendChild(Rth);
+  line(Rth, joints.right_hip, joints.right_knee);
+  const Rsh = grp('R_shin', joints.right_knee, 0.5);
+  Rth.appendChild(Rsh);
+  line(Rsh, joints.right_knee, joints.right_ankle);
+  circ(Rsh, joints.right_ankle, 6);
+
+  // draggable handles on top, absolute, always reflect `joints`
+  for(const name in joints){
+    const c = document.createElementNS(svg.namespaceURI,'circle');
+    c.setAttribute('cx', joints[name][0]);
+    c.setAttribute('cy', joints[name][1]);
+    c.setAttribute('r', 7);
+    c.setAttribute('class','joint-handle');
+    c.dataset.name = name;
+    handles.appendChild(c);
+  }
+  applyAnimState();
+}
+
+/* ---------- drag ---------- */
+let dragName = null;
+handles.addEventListener('pointerdown', (e)=>{
+  if(!e.target.classList.contains('joint-handle')) return;
+  dragName = e.target.dataset.name;
+  e.target.classList.add('dragging');
+  e.target.setPointerCapture(e.pointerId);
+});
+handles.addEventListener('pointermove', (e)=>{
+  if(!dragName) return;
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+  joints[dragName] = [Math.max(0,Math.min(W,loc.x)), Math.max(0,Math.min(H,loc.y))];
+  rebuild();
+});
+handles.addEventListener('pointerup', (e)=>{
+  if(e.target.classList) e.target.classList.remove('dragging');
+  dragName = null;
+});
+
+/* ---------- animation ---------- */
+let playing = false;
+let duration = 5.0;
+let amplitude = 1.0;
+
+const KEYFRAMES = `
+@keyframes swayArm    { 0%{transform:rotate(calc(var(--amp) * -18deg));} 50%{transform:rotate(calc(var(--amp) * 22deg));} 100%{transform:rotate(calc(var(--amp) * -18deg));} }
+@keyframes swayForearm{ 0%{transform:rotate(calc(var(--amp) * 10deg));} 50%{transform:rotate(calc(var(--amp) * -25deg));} 100%{transform:rotate(calc(var(--amp) * 10deg));} }
+@keyframes swayThigh  { 0%{transform:rotate(calc(var(--amp) * 14deg));} 50%{transform:rotate(calc(var(--amp) * -14deg));} 100%{transform:rotate(calc(var(--amp) * 14deg));} }
+@keyframes swayShin   { 0%{transform:rotate(calc(var(--amp) * -8deg));} 50%{transform:rotate(calc(var(--amp) * 20deg));} 100%{transform:rotate(calc(var(--amp) * -8deg));} }
+@keyframes bobSpine   { 0%{transform:translateY(0) rotate(calc(var(--amp) * -3deg));} 50%{transform:translateY(calc(var(--amp) * -14px)) rotate(calc(var(--amp) * 3deg));} 100%{transform:translateY(0) rotate(calc(var(--amp) * -3deg));} }
+@keyframes bobRoot    { 0%{transform:translateY(0);} 50%{transform:translateY(calc(var(--amp) * -6px));} 100%{transform:translateY(0);} }
+`;
+const ANIM_MAP = {
+  L_upperarm:'swayArm', R_upperarm:'swayArm',
+  L_forearm:'swayForearm', R_forearm:'swayForearm',
+  L_thigh:'swayThigh', R_thigh:'swayThigh',
+  L_shin:'swayShin', R_shin:'swayShin',
+  spine:'bobSpine', root:'bobRoot'
+};
+
+function applyAnimState(){
+  let css = KEYFRAMES + `\n#rig{--amp:${amplitude};}\n`;
+  if(playing){
+    for(const cls in ANIM_MAP){
+      const delay = (document.querySelector('.'+cls) && document.querySelector('.'+cls).dataset.phase) || 0;
+      css += `.part.${cls}{animation:${ANIM_MAP[cls]} ${duration}s ease-in-out infinite; animation-delay:${-(delay*duration)}s;}\n`;
+    }
+  } else {
+    css += `.part{animation:none; transform:none;}\n`;
+  }
+  styleTag.textContent = css;
+}
+
+document.getElementById('playBtn').addEventListener('click', (e)=>{
+  playing = !playing;
+  e.target.textContent = playing ? '⏸ Pause (edit pose)' : '▶ Play loop';
+  e.target.classList.toggle('on', playing);
+  applyAnimState();
+});
+document.getElementById('durSlider').addEventListener('input', (e)=>{
+  duration = parseFloat(e.target.value);
+  document.getElementById('durVal').textContent = duration.toFixed(1);
+  applyAnimState();
+});
+document.getElementById('ampSlider').addEventListener('input', (e)=>{
+  amplitude = parseFloat(e.target.value);
+  document.getElementById('ampVal').textContent = amplitude.toFixed(2);
+  applyAnimState();
+});
+
+/* ---------- export ---------- */
+function normTable(){
+  // v flipped to TOP convention (v-up, origin bottom-left) for the TD-native path
+  let lines = ['name\tu\tv_top_origin\tv_td_v-up'];
+  for(const k in joints){
+    const u = (joints[k][0]/W).toFixed(4);
+    const vTop = (joints[k][1]/H).toFixed(4);
+    const vTD = (1 - joints[k][1]/H).toFixed(4);
+    lines.push(`${k}\t${u}\t${vTop}\t${vTD}`);
+  }
+  return lines.join('\n');
+}
+
+function fullHtmlDoc(){
+  const bgHref = bg.getAttribute('href') || '';
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  html,body{margin:0;background:#000;overflow:hidden;}
+  svg{display:block;width:100vw;height:100vh;}
+  .bone{stroke:#171310;stroke-width:6;stroke-linecap:round;fill:none;}
+  .bone.thin{stroke-width:4;}
+${KEYFRAMES}
+  #rig{--amp:${amplitude};}
+${Object.keys(ANIM_MAP).map(cls=>{
+  const el = document.querySelector('.'+cls);
+  const delay = (el && el.dataset.phase) || 0;
+  return `  .part.${cls}{animation:${ANIM_MAP[cls]} ${duration}s ease-in-out infinite; animation-delay:${-(delay*duration)}s;}`;
+}).join('\n')}
+</style></head>
+<body>
+<svg id="rig" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <image x="0" y="0" width="${W}" height="${H}" href="${bgHref}" opacity="0.9"></image>
+  ${rigRoot.outerHTML.replace('id="rigRoot"','')}
+</svg>
+</body></html>`;
+}
+
+function pyGenerator(){
+  const jointsPy = Object.entries(joints).map(([k,v])=>
+    `    "${k}": (${(v[0]/W).toFixed(4)}, ${(1 - v[1]/H).toFixed(4)}),  # (u, v_up) TOP convention`
+  ).join('\n');
+  return `# svg_generator.py
+# Paste into a Text DAT at /svg_cam/svg_generator (Python syntax).
+# Wire a Button COMP to call:  op('svg_generator').module.generate()
+#
+# Rebuilds the cave-figure SVG rig from the live image on SOURCE_TOP,
+# writes the finished HTML into OUTPUT_DAT, and (re)points webrender1
+# at it — self-healing, so it also fixes a webrender1 that lost its
+# 'dat' wiring the way this one did.
+
+import base64, os
+
+SOURCE_TOP  = '/svg_cam/in1'          # TOP holding the cave-painting image
+OUTPUT_DAT  = '/svg_cam/svg_html_out' # Text DAT that webrender1 reads from
+WEBRENDER   = '/svg_cam/webrender1'
+DURATION_S  = ${duration}
+AMPLITUDE   = ${amplitude}
+
+# joints as (u, v) normalized, v_up = TOP convention (0 = bottom, 1 = top)
+JOINTS = {
+${jointsPy}
+}
+
+KEYFRAMES = """
+@keyframes swayArm    { 0%{transform:rotate(calc(var(--amp) * -18deg));} 50%{transform:rotate(calc(var(--amp) * 22deg));} 100%{transform:rotate(calc(var(--amp) * -18deg));} }
+@keyframes swayForearm{ 0%{transform:rotate(calc(var(--amp) * 10deg));} 50%{transform:rotate(calc(var(--amp) * -25deg));} 100%{transform:rotate(calc(var(--amp) * 10deg));} }
+@keyframes swayThigh  { 0%{transform:rotate(calc(var(--amp) * 14deg));} 50%{transform:rotate(calc(var(--amp) * -14deg));} 100%{transform:rotate(calc(var(--amp) * 14deg));} }
+@keyframes swayShin   { 0%{transform:rotate(calc(var(--amp) * -8deg));} 50%{transform:rotate(calc(var(--amp) * 20deg));} 100%{transform:rotate(calc(var(--amp) * -8deg));} }
+@keyframes bobSpine   { 0%{transform:translateY(0) rotate(calc(var(--amp) * -3deg));} 50%{transform:translateY(calc(var(--amp) * -14px)) rotate(calc(var(--amp) * 3deg));} 100%{transform:translateY(0) rotate(calc(var(--amp) * -3deg));} }
+@keyframes bobRoot    { 0%{transform:translateY(0);} 50%{transform:translateY(calc(var(--amp) * -6px));} 100%{transform:translateY(0);} }
+"""
+# (group class -> keyframe name, phase 0 or 0.5 of the loop)
+ANIM = {
+    'L_upperarm': ('swayArm', 0.5),   'R_upperarm': ('swayArm', 0),
+    'L_forearm':  ('swayForearm',0.5),'R_forearm':  ('swayForearm', 0),
+    'L_thigh':    ('swayThigh', 0),   'R_thigh':    ('swayThigh', 0.5),
+    'L_shin':     ('swayShin', 0),    'R_shin':     ('swayShin', 0.5),
+    'spine':      ('bobSpine', 0),    'root':       ('bobRoot', 0),
+}
+
+def _mid(a, b):
+    return ((a[0]+b[0])/2, (a[1]+b[1])/2)
+
+def _px(j, w, h):
+    # convert normalized (u, v_up) -> pixel (x, y_down) for SVG drawing
+    return (j[0]*w, (1 - j[1])*h)
+
+def _line(p1, p2, thin=False):
+    cls = 'bone thin' if thin else 'bone'
+    return f'<line x1="{p1[0]:.1f}" y1="{p1[1]:.1f}" x2="{p2[0]:.1f}" y2="{p2[1]:.1f}" class="{cls}"/>'
+
+def _circ(p, r):
+    return f'<circle cx="{p[0]:.1f}" cy="{p[1]:.1f}" r="{r}" class="bone"/>'
+
+def _grp(cls, pivot_px, inner):
+    return (f'<g class="part {cls}" style="transform-origin:{pivot_px[0]:.1f}px {pivot_px[1]:.1f}px">'
+            f'{inner}</g>')
+
+def build_svg(w, h):
+    J = {k: _px(v, w, h) for k, v in JOINTS.items()}
+    mid_hip = _mid(J['left_hip'], J['right_hip'])
+    neck    = _mid(J['left_shoulder'], J['right_shoulder'])
+
+    head = _grp('head', neck,
+        _line(neck, J['nose'], thin=True) + _circ(J['nose'], 10) +
+        ''.join(_circ(J[k], 3) for k in ('left_eye','right_eye','left_ear','right_ear')))
+
+    l_arm = _grp('L_upperarm', J['left_shoulder'],
+        _line(J['left_shoulder'], J['left_elbow']) +
+        _grp('L_forearm', J['left_elbow'],
+            _line(J['left_elbow'], J['left_wrist']) + _circ(J['left_wrist'], 6)))
+
+    r_arm = _grp('R_upperarm', J['right_shoulder'],
+        _line(J['right_shoulder'], J['right_elbow']) +
+        _grp('R_forearm', J['right_elbow'],
+            _line(J['right_elbow'], J['right_wrist']) + _circ(J['right_wrist'], 6)))
+
+    l_leg = _grp('L_thigh', J['left_hip'],
+        _line(J['left_hip'], J['left_knee']) +
+        _grp('L_shin', J['left_knee'],
+            _line(J['left_knee'], J['left_ankle']) + _circ(J['left_ankle'], 6)))
+
+    r_leg = _grp('R_thigh', J['right_hip'],
+        _line(J['right_hip'], J['right_knee']) +
+        _grp('R_shin', J['right_knee'],
+            _line(J['right_knee'], J['right_ankle']) + _circ(J['right_ankle'], 6)))
+
+    spine = _grp('spine', mid_hip, _line(mid_hip, neck) + head + l_arm + r_arm)
+    root  = _grp('root', mid_hip, _line(J['left_hip'], J['right_hip']) + spine + l_leg + r_leg)
+    return root
+
+def build_css():
+    rules = [KEYFRAMES, f'#rig{{--amp:{AMPLITUDE};}}',
+             '.bone{stroke:#171310;stroke-width:6;stroke-linecap:round;fill:none;}',
+             '.bone.thin{stroke-width:4;}']
+    for cls, (kf, phase) in ANIM.items():
+        rules.append(
+            f'.part.{cls}{{animation:{kf} {DURATION_S}s ease-in-out infinite; '
+            f'animation-delay:{-(phase*DURATION_S)}s;}}'
+        )
+    return '\\n'.join(rules)
+
+def generate():
+    src = op(SOURCE_TOP)
+    if src is None:
+        print(f'[svg_generator] ERROR: no TOP at {SOURCE_TOP} — add a TOP In or image loader there first.')
+        return
+
+    w, h = src.width, src.height
+    tmp = project.folder + '/svg_cam_tmp.png'
+    src.save(tmp)
+    with open(tmp, 'rb') as f:
+        b64 = base64.b64encode(f.read()).decode('ascii')
+    os.remove(tmp)
+
+    svg_body = build_svg(w, h)
+    css = build_css()
+    html = f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+html,body{{margin:0;background:#000;overflow:hidden;}}
+svg{{display:block;width:100vw;height:100vh;}}
+{css}
+</style></head><body>
+<svg id="rig" viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg">
+<image x="0" y="0" width="{w}" height="{h}" href="data:image/png;base64,{b64}" opacity="0.9"></image>
+{svg_body}
+</svg>
+</body></html>'''
+
+    out = op(OUTPUT_DAT)
+    if out is None:
+        print(f'[svg_generator] ERROR: create a Text DAT at {OUTPUT_DAT} first.')
+        return
+    out.text = html
+
+    wr = op(WEBRENDER)
+    if wr is not None:
+        wr.par.source = 'dat'
+        wr.par.dat = out
+        wr.par.reload.pulse()
+        print('[svg_generator] webrender1 wired to', OUTPUT_DAT, '— reload pulsed.')
+    else:
+        print(f'[svg_generator] ERROR: no webrenderTOP at {WEBRENDER}')
+`;
+}
+
+document.getElementById('expHtmlBtn').addEventListener('click', ()=>{
+  document.getElementById('outArea').value = fullHtmlDoc();
+});
+document.getElementById('expPyBtn').addEventListener('click', ()=>{
+  document.getElementById('outArea').value = pyGenerator();
+});
+document.getElementById('expTableBtn').addEventListener('click', ()=>{
+  document.getElementById('outArea').value = normTable();
+});
+document.getElementById('copyAreaBtn').addEventListener('click', ()=>{
+  const ta = document.getElementById('outArea');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(()=>{
+    const b = document.getElementById('copyAreaBtn');
+    const old = b.textContent; b.textContent = 'Copied ✓';
+    setTimeout(()=>b.textContent = old, 1200);
+  });
+});
+
+rebuild();
+</script>
+</body>
+</html>

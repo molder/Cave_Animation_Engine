@@ -24,14 +24,17 @@ class AnimationManager {
 
         this.jsonData = null;
 
+        this.referenceFrame = null;
+
 
         this.frame = 0;
 
+        // playback direction for ping-pong looping -
+        // see updateJSON()
+        this.direction = 1;
+
 
         this.playing = false;
-
-        this.frameStep = 3;
-        this.updateCounter = 0;
 
 
 
@@ -43,10 +46,20 @@ class AnimationManager {
         this.speed = 1.0;
 
 
+        // smoothing for recorded JSON playback only -
+        // eases toward each frame's target instead of
+        // snapping to it, so camera-tracking noise
+        // doesn't read as jitter. 1.0 = no smoothing
+        // (old snap behaviour), lower = smoother/laggier
 
-        // DEBUG
+        this.smoothing = 0.25;
 
-        this.debug = true;
+
+
+        // DEBUG - set true for the occasional status
+        // line + a left_knee diagnostic once a second
+
+        this.debug = false;
 
 
         this.debugCounter = 0;
@@ -78,8 +91,58 @@ class AnimationManager {
 
         this.frame = 0;
 
+        this.direction = 1;
+
 
         this.jsonData = null;
+
+        this.referenceFrame = null;
+
+
+
+        // NONE - stop animation and reload whatever pose
+        // is currently selected (falls back to the
+        // default pose if nothing is selected). This is
+        // your "start position" - whatever character/pose
+        // you were actually working with, not a generic
+        // hardcoded rig - so no leftover distortion from
+        // whatever animation was playing carries over.
+
+        if(!name){
+
+
+            this.mode = "none";
+
+            this.playing = false;
+
+
+            if(typeof resetPoseToSelected === "function"){
+
+
+                resetPoseToSelected();
+
+
+            }
+
+            else if(typeof createDefaultPose === "function"){
+
+
+                createDefaultPose();
+
+
+            }
+
+
+            console.log(
+                "Animation: None (reset to current pose)"
+            );
+
+
+            return;
+
+
+        }
+
 
 
         this.playing = true;
@@ -210,6 +273,11 @@ class AnimationManager {
 
 
         }
+        else{
+
+            this.debugCounter++;
+
+        }
 
 
 
@@ -255,74 +323,110 @@ class AnimationManager {
 
 
 
-   // ==================================================
-// JSON PLAYBACK
-// ==================================================
+    // ==================================================
+    // JSON PLAYBACK
+    //
+    // Ping-pong looping (forward, then backward, then
+    // forward again) instead of a hard reset to frame 0.
+    // Real recorded clips almost never end where they
+    // started, so cutting straight back to frame 0 made
+    // the character snap to the reference pose every loop
+    // - ping-ponging means every step is still between
+    // two ADJACENT recorded frames, so there's never a
+    // big jump, just a smooth reversal at the ends.
+    // ==================================================
 
-updateJSON(){
+    updateJSON(){
 
 
-    if(
-        !this.jsonData ||
-        !this.jsonData.frames
-    ){
+        if(
+            !this.jsonData ||
+            !this.jsonData.frames
+        ){
 
-        console.warn(
-            "No JSON data"
+            console.warn(
+                "No JSON data"
+            );
+
+            return;
+
+        }
+
+
+
+        let frames =
+        this.jsonData.frames;
+
+
+        let lastIndex =
+        frames.length - 1;
+
+
+
+        let index =
+        Math.round(
+            this.frame
         );
 
-        return;
+
+        if(index < 0) index = 0;
+
+        if(index > lastIndex) index = lastIndex;
+
+
+
+        let frame =
+        frames[index];
+
+
+
+        if(
+            this.debug &&
+            this.debugCounter % 60 === 0
+        ){
+
+            console.log(
+                "JSON frame",
+                index,
+                "/",
+                lastIndex,
+                "dir",
+                this.direction
+            );
+
+        }
+
+
+
+        this.applyFrame(
+            frame
+        );
+
+
+
+        this.frame +=
+        this.speed * this.direction;
+
+
+        if(this.frame >= lastIndex){
+
+            this.frame = lastIndex;
+
+            this.direction = -1;
+
+        }
+
+        else if(this.frame <= 0){
+
+            this.frame = 0;
+
+            this.direction = 1;
+
+        }
+
+
 
     }
-
-
-
-    let frames =
-    this.jsonData.frames;
-
-
-
-    let index =
-    Math.floor(
-        this.frame
-    );
-
-
-
-    if(index >= frames.length){
-
-        this.frame = 0;
-
-        index = 0;
-
-    }
-
-
-
-    let frame =
-    frames[index];
-
-
-
-    console.log(
-        "PLAYING JSON FRAME",
-        index
-    );
-
-
-
-    this.applyFrame(
-        frame
-    );
-
-
-
-    this.frame +=
-    this.speed;
-
-
-
-}
 
 
 
@@ -330,10 +434,64 @@ updateJSON(){
 
     // ==================================================
     // APPLY FRAME
+    //
+    // The recording captures a real person who physically
+    // moved around the room while performing - so a
+    // joint's raw camera-space position mixes two very
+    // different things: (1) the small local limb
+    // articulation we actually want, and (2) the
+    // performer's overall body translation across the
+    // floor, which can be huge by comparison (this clip's
+    // knee X alone spans over half the camera frame).
+    //
+    // This character rig doesn't walk across the canvas -
+    // it stays put and articulates in place. So every
+    // joint is first expressed RELATIVE TO A ROOT (the
+    // midpoint of the hips) before comparing it to the
+    // clip's first frame. That cancels out the whole-body
+    // translation and leaves only the actual local
+    // movement (arm swing, knee bend) to drive the rig.
     // ==================================================
+
+    rootOf(f){
+
+        if(f.left_hip && f.right_hip){
+
+            return [
+                (f.left_hip[0] + f.right_hip[0]) / 2,
+                (f.left_hip[1] + f.right_hip[1]) / 2
+            ];
+
+        }
+
+        if(f.center_hip){
+
+            return f.center_hip;
+
+        }
+
+        return [0, 0];
+
+    }
+
 
     applyFrame(frame){
 
+
+        if(!this.referenceFrame){
+
+            this.referenceFrame =
+            this.jsonData.frames[0];
+
+        }
+
+
+        let frameRoot =
+        this.rootOf(frame);
+
+
+        let refRoot =
+        this.rootOf(this.referenceFrame);
 
 
         for(
@@ -346,77 +504,108 @@ updateJSON(){
                 joints[jointName]
                 &&
                 basePose[jointName]
+                &&
+                this.referenceFrame[jointName]
             ){
 
 
+                let ref =
+                this.referenceFrame[jointName];
 
-                let targetX =
 
-                frame[jointName][0]
+                // joint position relative to its OWN
+                // frame's root (hip midpoint) - this is
+                // what removes whole-body translation
 
+                let jointRelX =
+                frame[jointName][0] - frameRoot[0];
+
+
+                let jointRelY =
+                frame[jointName][1] - frameRoot[1];
+
+
+                let refRelX =
+                ref[0] - refRoot[0];
+
+
+                let refRelY =
+                ref[1] - refRoot[1];
+
+
+                // recorded LOCAL movement relative to the
+                // clip's own rest frame, converted from
+                // normalized 0..1 to pixels. Y is not
+                // inverted: canvas and recording both use
+                // top-left origin (Y increases downward).
+
+                let dx =
+                (jointRelX - refRelX)
                 *
-
                 canvas.width;
 
 
-
-
-
-                let targetY =
-
-                (1-frame[jointName][1])
-
+                let dy =
+                (jointRelY - refRelY)
                 *
-
                 canvas.height;
 
 
+                let targetX =
+                basePose[jointName].x + dx * this.intensity;
+
+
+                let targetY =
+                basePose[jointName].y + dy * this.intensity;
+
+
+                if(
+                    this.debug &&
+                    jointName === "left_knee" &&
+                    this.debugCounter % 60 === 0
+                ){
+
+                    console.log(
+                        "DIAG left_knee",
+                        {
+                            frameRaw: frame[jointName],
+                            refRaw: ref,
+                            frameRoot: frameRoot,
+                            refRoot: refRoot,
+                            dx: dx,
+                            dy: dy,
+                            targetX: targetX,
+                            targetY: targetY,
+                            currentX: joints[jointName].x,
+                            currentY: joints[jointName].y
+                        }
+                    );
+
+                }
 
 
 
-                joints[jointName].x =
-
-
-                basePose[jointName].x
-
-                +
+                joints[jointName].x +=
 
                 (
-
-                    targetX -
-
-                    basePose[jointName].x
-
+                    targetX - joints[jointName].x
                 )
 
                 *
 
-                this.intensity;
+                this.smoothing;
 
 
 
-
-
-
-
-                joints[jointName].y =
-
-
-                basePose[jointName].y
-
-                +
+                joints[jointName].y +=
 
                 (
-
-                    targetY -
-
-                    basePose[jointName].y
-
+                    targetY - joints[jointName].y
                 )
 
                 *
 
-                this.intensity;
+                this.smoothing;
 
 
 
@@ -724,5 +913,3 @@ updateJSON(){
 let animationManager =
 
 new AnimationManager();
-
-

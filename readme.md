@@ -1,229 +1,141 @@
-# Cave Animation Engine
+# TD_system
 
-## Version
-Current development version: V11
+Real-time audiovisual systems for TouchDesigner.
 
-A browser-based 2D character deformation and animation system developed for audiovisual and artistic applications.
+## Cave Animation Engine
 
-The engine combines:
+Cave Animation Engine is a project inside TD_system.
 
-- image-based characters
-- editable skeleton poses
-- mesh deformation
-- procedural animation
-- sci-fi inspired interface design
+It combines:
 
----
-
-# Core Features
-
-## Image System
-
-- Load external PNG/JPG images
-- Display images on canvas
-- Prepare images for deformation
-
-## Pose System
-
-- Load skeleton pose JSON files
-- Create default poses
-- Drag and edit joints
-- Save custom poses
-
-Supported joints:
-
-- nose
-- neck
-- shoulders
-- elbows
-- wrists
-- hips
-- knees
-- ankles
-
----
-
-# Mesh Deformation
-
-The engine creates a triangle-based deformation mesh.
-
-Workflow:
-
-1. Load image
-2. Load or create pose
-3. Create mesh
-4. Move skeleton joints
-5. Mesh follows the skeleton
-
-The deformation system uses:
-
-- mesh points
-- bone binding
-- triangle texture mapping
-
-The skeleton controls the image without destroying the original texture.
-
----
-
-# Animation System
-
-Animations are separated into:
-animation.js
+- TouchDesigner realtime tracking
+- YOLO / COCO17 body data
+- Pose and animation JSON data
+- Browser-based image animation
+- Mesh deformation
+- WebSocket communication
+- Syphon video output (macOS)
+- Future NDI video transport (Windows)
 
 
-The engine supports external animation modules.
+## Project Structure
 
-Current animations:
-
-## Breathing
-
-Subtle body expansion.
-
-## Walking
-
-Leg movement with connected mesh deformation.
-
-## Hip Hop
-
-Rhythmic body movement:
-
-- shoulders
-- arms
-- bounce
-
-## Techno
-
-Pulse based movement:
-
-- hands
-- body rhythm
-
-## Ceremony
-
-Slow gesture movement inspired by performance and calligraphy.
-
----
-
-# Project Structure
-
-
-Cave_Animation_Engine
-
-│
-├── index.html
-│
-├── engine.js
-│
-├── animation.js
-│
+```
+Cave_Animation_Engine_/
+├── index.html            entry point, loads all scripts
+├── engine.js              canvas render loop, mesh warp/draw
+├── animation.js            animation update loop
+├── animationManager.js     central animation controller
+├── presetLibrary.js        image / pose / animation dropdowns + manifests
+├── bridge.js               WebSocket client -> Bridge (canvas frame sender)
+├── menu_fx.js               UI menu effects
+├── settings.json
 ├── style.css
-│
-├── menu_fx.js
-│
-├── poses
-│ └── pose.json
-│
-└── animations
-├── breathing.json
-├── walking.json
-├── hiphop.json
-├── techno.json
-└── ceremony.json
+├── images/                 source images + manifest.json
+├── poses/                  pose JSON presets + manifest.json
+├── style/                  animation JSON presets + manifest.json
+├── rig_engine/              skeleton / mesh rigging logic
+├── tools/
+├── dev/
+├── JSONrecorder/
+└── Bridge/                 Node.js server - see Bridge/README.md
+```
 
 
----
+## Current Features
 
-# Interface Design
-
-The UI follows a silent sci-fi philosophy:
-
-- minimal controls
-- transparent holographic panel
-- subtle green illumination
-- low visual distraction
-
-The artwork remains the main focus.
-
----
-
-# Development Roadmap
-
-## V12
-
-Animation improvements:
-
-- smoother interpolation
-- keyframe animation
-- animation recording
-- external animation presets
+✅ Image presets (manifest-driven dropdown)
+✅ Pose presets (manifest-driven dropdown)
+✅ Animation presets (manifest-driven dropdown)
+✅ Mouse joint editing
+✅ COCO17 skeleton
+✅ Mesh generation
+✅ Texture warping
+✅ Walking animation JSON
+✅ Procedural animations
+✅ Browser optimized rendering (Chrome)
+✅ Bridge WebSocket connection + frame streaming
+✅ Syphon output module (macOS, not yet live-tested end-to-end)
 
 
-## V13
+## Animation Flow
 
-Advanced deformation:
-
-- weighted bones
-- multiple influence zones
-- smoother body bending
-
-
-## V14
-
-Performance integration:
-
-- OSC control
-- TouchDesigner communication
-- live tracking input
-
-
----
-
-# Development Notes
-
-Important rule:
-
-`engine.js`
-
-handles:
-
-- image
-- pose
-- mesh
-- rendering
+```
+Image
+  │
+  ▼
+Pose JSON
+  │
+  ▼
+Skeleton
+  │
+  ▼
+Mesh
+  │
+  ▼
+Animation
+  │
+  ▼
+Deformed Image
+```
 
 
-`animation.js`
+## Bridge
 
-handles:
+Communication with external systems (TouchDesigner):
 
-- movement
-- choreography
-- procedural behaviour
+[Bridge Documentation](./Bridge/README.md)
 
 
-Keep animation separated from the rendering engine.
+## Status (2026-08-04)
 
----
+### Milestone 1 — Asset Library ✅ done
 
-# Git Checkpoint
+- Image / Pose / Animation dropdowns are populated from
+  `images/manifest.json`, `poses/manifest.json`, `style/manifest.json`.
+- `updateLibrary()` re-fetches all three manifests and refreshes the
+  dropdowns without a page reload.
+- Fixed 2026-08-04: a leftover dead code block in `presetLibrary.js`
+  (`imageSelect.onchange` / `poseSelect.onchange` referenced before
+  their `let` declarations) was throwing a `ReferenceError` on load
+  and silently killing the rest of the script, which is why the
+  Image and Pose dropdowns stopped responding after the manifest
+  work was added. Removed; dropdowns work again.
 
-Current stable milestone:
+### Milestone 2 — TouchDesigner Bridge 🔧 in progress
+
+Data flow:
+
+```
+Browser Canvas → WebSocket → Bridge (Node) → Syphon → TouchDesigner
+```
+
+- ✅ Browser streams canvas frames (JPEG, ~30fps) over WebSocket.
+- ✅ Fixed 2026-08-04: `CommandServer` never had a `message` listener,
+  so incoming frames were silently dropped before reaching
+  `FrameReceiver` / `FramePublisher`. Wired `CommandServer` →
+  `BridgeServer.handleFrame()` → `FrameReceiver.receive()` +
+  `FramePublisher.publish()`.
+- ✅ Added `Bridge/Modules/Output/SyphonSender.js`: decodes incoming
+  JPEG frames (`sharp`) and publishes them to a Syphon server
+  (`node-syphon`) named `"Cave Animation Engine"`, so TouchDesigner
+  can pick it up with a Syphon In TOP / Syphon Spout In TOP.
+- ⏳ Not yet run: `npm install` in `Bridge/` (needs Xcode Command
+  Line Tools for the native `node-syphon` build) and a first live
+  test against TouchDesigner.
+- ⏳ NDI sender (Windows) deferred until the Syphon path is confirmed
+  working — see `Bridge/Modules/NDI/` for the existing scaffold.
 
 
-Clean UI
-Working image loading
-Working pose loading
-Working mesh creation
-Working skeleton editing
-Connected animation system
+## Roadmap
+
+- Confirm Syphon output live in TouchDesigner (Milestone 2).
+- Native NDI sender for Windows deployment.
+- Live YOLO input.
+- More animation libraries.
+- Performance optimization.
 
 
----
+## Parent Project
 
-Developed for experimental animation and audiovisual performance workflows.
-
-Then commit it:
-
-git add README.md
-git commit -m "Add project documentation and development roadmap"
-git push origin main
+[TD_system](../README.md)

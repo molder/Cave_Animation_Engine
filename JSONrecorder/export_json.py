@@ -27,7 +27,7 @@ ANIMATION_NAME = "animation_01"
 
 TARGET_FRAMES = 600
 
-EXPORT_FOLDER = "./style"
+
 
 # ==================================================
 # INPUT CHOP TO DAT WITH FALLBACK

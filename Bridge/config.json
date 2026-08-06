@@ -1,0 +1,43 @@
+{
+    "bridge": {
+      "name": "Cave Animation Bridge",
+      "version": "0.1.0"
+    },
+  
+    "server": {
+      "host": "127.0.0.1",
+      "port": 9000
+    },
+  
+    "websocket": {
+      "port": 9001
+    },
+  
+    "osc": {
+      "enabled": true,
+      "inputPort": 7777,
+      "outputPort": 7778
+    },
+  
+    "modules": {
+      "NDI": {
+        "enabled": false
+      },
+      "Syphon": {
+        "enabled": true
+      }
+    },
+  
+    "video": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60
+    },
+  
+    "syphon": {
+      "name": "Cave Animation Engine",
+      "flipped": false,
+      "textureTarget": "GL_TEXTURE_2D",
+      "maxFps": 30
+    }
+  }
